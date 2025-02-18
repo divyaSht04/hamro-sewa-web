@@ -12,36 +12,37 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ServiceList from './pages/admin/ServiceList';
 import AdminProfile from './pages/admin/AdminProfile';
+import { EditProfilePage } from './pages/user/EditProfilePage';
 import Aos from 'aos';
 import "aos/dist/aos.css"
 function ScrollToTopButton() {
-  const [isVisible, setIsVisible] = useState(false);
-  const location = useLocation();
+  const [isVisible, setIsVisible] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     const toggleVisibility = () => {
       if (window.scrollY > 300) {
-        setIsVisible(true);
+        setIsVisible(true)
       } else {
-        setIsVisible(false);
+        setIsVisible(false)
       }
-    };
+    }
 
-    window.addEventListener('scroll', toggleVisibility);
+    window.addEventListener("scroll", toggleVisibility)
 
-    return () => window.removeEventListener('scroll', toggleVisibility);
-  }, []);
+    return () => window.removeEventListener("scroll", toggleVisibility)
+  }, [])
 
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
-    });
-  };
+      behavior: "smooth",
+    })
+  }
 
   // Hide button on login, register, and admin pages
-  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname.startsWith('/admin')) {
-    return null;
+  if (location.pathname === "/login" || location.pathname === "/register" || location.pathname.startsWith("/admin")) {
+    return null
   }
 
   return isVisible ? (
@@ -52,22 +53,22 @@ function ScrollToTopButton() {
     >
       <ArrowUp size={24} />
     </button>
-  ) : null;
+  ) : null
 }
 
 function AppContent() {
-  const location = useLocation();
+  const location = useLocation()
 
-  useEffect(() =>{
+  useEffect(() => {
     Aos.init({
-      duration:900,
+      duration: 900,
       once: true,
-      offset:10,
-      delay:2
+      offset: 10,
+      delay: 2,
     })
-  },[])
+  }, [])
 
-  const showHeaderFooter = !['/login', '/register','/admin','/admin/profile','/admin/services'].includes(location.pathname);
+  const showHeaderFooter = !["/login", "/register"].includes(location.pathname)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -80,19 +81,23 @@ function AppContent() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/admin/*" element={
-            <Routes>
-              <Route index element={<AdminDashboard />} />
-              <Route path="services" element={<ServiceList />} />
-              <Route path="profile" element={<AdminProfile />} />
-            </Routes>
-          } />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route
+            path="/admin/*"
+            element={
+              <Routes>
+                <Route index element={<AdminDashboard />} />
+                <Route path="services" element={<ServiceList />} />
+                <Route path="profile" element={<AdminProfile />} />
+              </Routes>
+            }
+          />
         </Routes>
       </main>
       {showHeaderFooter && <Footer />}
       <ScrollToTopButton />
     </div>
-  );
+  )
 }
 
 function App() {
@@ -100,8 +105,8 @@ function App() {
     <Router>
       <AppContent />
     </Router>
-  );
+  )
 }
 
-export default App;
+export default App
 
