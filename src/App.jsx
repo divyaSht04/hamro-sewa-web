@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-import { ArrowUp } from 'lucide-react';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import HomePage from './pages/staticPages/HomePage';
-import AboutUsPage from './pages/staticPages/AboutUsPage';
-import ServicePage from './pages/staticPages/ServicePage';
-import ContactPage from './pages/staticPages/ContactPage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ServiceList from './pages/admin/ServiceList';
-import AdminProfile from './pages/admin/AdminProfile';
-import { EditProfilePage } from './pages/user/EditProfilePage';
-import Aos from 'aos';
+import { useEffect, useState } from "react"
+import { BrowserRouter as Router, Route, Routes, useLocation } from "react-router-dom"
+import { ArrowUp } from "lucide-react"
+import Header from "./components/Header"
+import Footer from "./components/Footer"
+import HomePage from "./pages/staticPages/HomePage"
+import AboutUsPage from "./pages/staticPages/AboutUsPage"
+import ServicePage from "./pages/staticPages/ServicePage"
+import ContactPage from "./pages/staticPages/ContactPage"
+import { LoginPage } from "./pages/auth/LoginPage"
+import { RegisterPage } from "./pages/auth/RegisterPage"
+import AdminDashboard from "./pages/admin/AdminDashboard"
+import ServiceList from "./pages/admin/ServiceList"
+import AdminProfile from "./pages/admin/AdminProfile"
+import Aos from "aos"
 import "aos/dist/aos.css"
+import { EditProfilePage } from "./pages/user/EditProfilePage"
+
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
   const location = useLocation()
@@ -68,7 +69,8 @@ function AppContent() {
     })
   }, [])
 
-  const showHeaderFooter = !["/login", "/register"].includes(location.pathname)
+
+  const showHeaderFooter = !['/login', '/register','/admin','/admin/profile','/admin/services'].includes(location.pathname);
 
   return (
     <div className="flex flex-col min-h-screen">

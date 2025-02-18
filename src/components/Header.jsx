@@ -67,7 +67,7 @@ function Header() {
               <Link
                 to="/login"
                 className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors duration-200"
-              >https://divyaSht04@github.com
+              >
                 Login
               </Link>
             </div>
