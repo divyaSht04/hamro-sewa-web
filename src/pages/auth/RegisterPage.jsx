@@ -1,13 +1,9 @@
-import React from 'react';
-import { useState } from "react"
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { AuthForm } from '../../components/auth/AuthFrom';
-import { LogIn, User, Briefcase } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { User, Briefcase, LogIn } from "lucide-react"
 
 export function RegisterPage() {
   const navigate = useNavigate()
-  const [userType, setUserType] = useState("customer")
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
@@ -41,32 +37,31 @@ export function RegisterPage() {
               transition={{ delay: 0.4 }}
               className="text-gray-600"
             >
-              Join Hamro Sewa as a customer or service provider
+              Choose your account type to get started
             </motion.p>
           </div>
 
-          <div className="flex justify-center space-x-4 mb-6">
-            <button
-              onClick={() => setUserType("customer")}
-              className={`flex items-center px-4 py-2 rounded-full ${
-                userType === "customer" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition-colors duration-200`}
+          <div className="flex flex-col space-y-4 mb-6">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate("/register/user")}
+              className="flex items-center justify-center px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors duration-200"
             >
               <User className="mr-2" size={18} />
-              Customer
-            </button>
-            <button
-              onClick={() => setUserType("provider")}
-              className={`flex items-center px-4 py-2 rounded-full ${
-                userType === "provider" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition-colors duration-200`}
+              Register as Customer
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate("/register/provider")}
+              className="flex items-center justify-center px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors duration-200"
             >
               <Briefcase className="mr-2" size={18} />
-              Service Provider
-            </button>
+              Register as Service Provider
+            </motion.button>
           </div>
-
-          <AuthForm type="register" userType={userType} />
 
           <motion.div
             initial={{ opacity: 0 }}

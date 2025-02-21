@@ -1,10 +1,23 @@
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { AuthForm } from '../../components/auth/AuthFrom';
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { UserPlus } from "lucide-react"
+import { AuthForm } from '../../components/auth/AuthFrom'
 
-import { LogIn, UserPlus } from 'lucide-react';
 export function LoginPage() {
   const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (formData) => {
+    setIsLoading(true)
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    console.log("Login form submitted:", formData)
+    setIsLoading(false)
+    // Add your login logic here
+    // If login is successful, navigate to the dashboard
+    // navigate('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
@@ -42,7 +55,7 @@ export function LoginPage() {
             </motion.p>
           </div>
 
-          <AuthForm type="login" />
+          <AuthForm type="login" onSubmit={handleSubmit} />
 
           <motion.div
             initial={{ opacity: 0 }}

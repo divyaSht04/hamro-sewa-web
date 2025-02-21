@@ -15,6 +15,8 @@ import AdminProfile from "./pages/admin/AdminProfile"
 import Aos from "aos"
 import "aos/dist/aos.css"
 import { EditProfilePage } from "./pages/user/EditProfilePage"
+import { UserRegisterPage } from "./pages/auth/UserRegisterPage"
+import { ProviderRegisterPage } from "./pages/auth/ProviderRegisterPage"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -69,8 +71,15 @@ function AppContent() {
     })
   }, [])
 
-
-  const showHeaderFooter = !['/login', '/register','/admin','/admin/profile','/admin/services'].includes(location.pathname);
+  const showHeaderFooter = ![
+    "/login",
+    "/register",
+    "/register/user",
+    "/register/provider",
+    "/admin",
+    "/admin/profile",
+    "/admin/services",
+  ].includes(location.pathname)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -83,6 +92,8 @@ function AppContent() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register/user" element={<UserRegisterPage />} />
+          <Route path="/register/provider" element={<ProviderRegisterPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route
             path="/admin/*"

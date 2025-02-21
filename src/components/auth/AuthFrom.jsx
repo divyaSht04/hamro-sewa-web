@@ -1,7 +1,7 @@
-import { useState, useRef } from "react"
-import { useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera } from "lucide-react"
+import LoadingSpinner from "../ui/LoadingSpinner.jsx"
 
 export function AuthForm({ type, userType, initialData, onSubmit }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -23,6 +23,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
   )
   const [photoPreview, setPhotoPreview] = useState(type === "edit" ? initialData?.photo : null)
   const fileInputRef = useRef(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (type === "edit" && initialData) {
@@ -41,14 +42,21 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsLoading(true)
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
     if (type === "edit" && onSubmit) {
       onSubmit(formData)
     } else {
       console.log("Form submitted:", formData)
       // Add your authentication logic here
     }
+
+    setIsLoading(false)
   }
 
   return (
@@ -164,36 +172,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
           </button>
         </div>
       )}
-      {type === "register" && (
-        <div className="relative">
-          <input
-            type="file"
-            name="photo"
-            onChange={handleChange}
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current.click()}
-            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <Camera className="mr-2" size={18} />
-            {photoPreview ? "Change Photo" : "Upload Photo"}
-          </button>
-          {photoPreview && (
-            <div className="mt-2 flex justify-center">
-              <img
-                src={photoPreview || "/placeholder.svg"}
-                alt="Preview"
-                className="w-24 h-24 object-cover rounded-full"
-              />
-            </div>
-          )}
-        </div>
-      )}
-      {type === "edit" && (
+      {(type === "register" || type === "edit") && (
         <div className="relative">
           <input
             type="file"
@@ -237,9 +216,21 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         type="submit"
-        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark transition-colors duration-300"
+        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark transition-colors duration-300 flex items-center justify-center"
+        disabled={isLoading}
       >
-        {type === "login" ? "Sign In" : type === "register" ? "Create Account" : "Update Profile"}
+        {isLoading ? (
+          <>
+            <LoadingSpinner size="w-5 h-5 mr-2" />
+            {type === "login" ? "Signing In..." : type === "register" ? "Creating Account..." : "Updating Profile..."}
+          </>
+        ) : type === "login" ? (
+          "Sign In"
+        ) : type === "register" ? (
+          "Create Account"
+        ) : (
+          "Update Profile"
+        )}
       </motion.button>
     </motion.form>
   )
