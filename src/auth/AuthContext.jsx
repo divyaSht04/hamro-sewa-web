@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { authService } from '../services/authService';
+import { ROLES, ROLE_PATHS } from '../constants/roles';
 
 const AuthContext = createContext(null);
 
@@ -9,8 +10,44 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState(user?.role || null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleError = (error) => {
+    let message = 'An unexpected error occurred';
+    
+    if (error.response) {
+        switch (error.response.status) {
+            case 400:
+                message = error.response.data.message || 'Invalid request';
+                break;
+            case 401:
+                message = 'Unauthorized access';
+                setUser(null);
+                setUserRole(null);
+                navigate('/login');
+                break;
+            case 403:
+                message = 'Access forbidden';
+                navigate('/access-denied');
+                break;
+            case 404:
+                message = 'Resource not found';
+                break;
+            case 500:
+                message = 'Server error. Please try again later';
+                break;
+            default:
+                message = error.response.data?.message || message;
+        }
+    } else if (error.request) {
+        message = 'Network error. Please check your connection';
+    }
+    
+    toast.error(message);
+    setError(message);
+  };
 
   const login = useCallback(async (email, password) => {
     setLoading(true);
@@ -21,10 +58,13 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(email, password);
       toast.dismiss(loadingToast);
       
-      if (response.token && response.user) {
+      if (response.user) {
         setUser(response.user);
-        // Redirect to the page they tried to visit or home
-        const from = location.state?.from?.pathname || '/';
+        setUserRole(response.user.role);
+        
+        // Redirect based on role
+        const rolePath = ROLE_PATHS[response.user.role] || '/';
+        const from = location.state?.from?.pathname || rolePath;
         
         toast.success('Login successful! Welcome back!');
         // Small delay to ensure toast is visible
@@ -37,9 +77,8 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Invalid response from server');
     } catch (err) {
       toast.dismiss(loadingToast);
-      const message = err.message || 'Login failed';
-      setError(message);
-      return { success: false, error: message };
+      handleError(err);
+      return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
@@ -50,70 +89,28 @@ export const AuthProvider = ({ children }) => {
       const loadingToast = toast.loading('Logging out...');
       await authService.logout();
       toast.dismiss(loadingToast);
-      toast.success('Logged out successfully');
       
       setUser(null);
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Error during logout');
-      navigate('/login', { replace: true });
+      setUserRole(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch (err) {
+      handleError(err);
     }
   }, [navigate]);
 
-  const isAuthenticated = useCallback(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expiry = payload.exp * 1000; // Convert to milliseconds
-      
-      // Check if token is expired or will expire in the next 5 minutes
-      const expiresIn = expiry - Date.now();
-      if (expiresIn <= 0) {
-        logout(); // Auto logout if token is expired
-        return false;
-      }
-      
-      // If token will expire in less than 5 minutes, we could implement token refresh here
-      if (expiresIn < 300000) { // 5 minutes in milliseconds
-        console.warn('Token will expire soon');
-      }
-      
-      return true;
-    } catch (e) {
-      console.error('Error parsing token:', e);
-      return false;
-    }
-  }, [logout]);
-
-  const isAdmin = useCallback(() => {
-    return user?.roles?.includes('ROLE_ADMIN') || false;
-  }, [user]);
-
-  const isServiceProvider = useCallback(() => {
-    return user?.roles?.includes('ROLE_SERVICE_PROVIDER') || false;
-  }, [user]);
-
   const value = {
     user,
+    userRole,
     loading,
     error,
     login,
     logout,
-    isAuthenticated: isAuthenticated(),
-    isAdmin: isAdmin(),
-    isServiceProvider: isServiceProvider(),
+    isAuthenticated: !!user,
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

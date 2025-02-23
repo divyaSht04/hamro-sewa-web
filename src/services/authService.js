@@ -1,6 +1,20 @@
 import axios from 'axios';
+import { ROLES } from '../constants/roles';
 
 const API_URL = 'http://localhost:8084/auth';
+
+// Add axios interceptors for global error handling
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Clear local storage and redirect to login
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
 
 export const authService = {
     login: async (email, password) => {
@@ -17,29 +31,39 @@ export const authService = {
             const response = await axios.post(`${API_URL}/login`, loginData);
             
             if (response.data) {
-                const token = response.data;
-                // Parse the JWT to get user info
-                const userData = JSON.parse(atob(token.split('.')[1]));
+                const { token, user } = response.data;
                 
-                // Store both token and user data
+                if (!token || !user) {
+                    throw new Error('Invalid response format from server');
+                }
+
+                // Get the role from user.roles array
+                const role = user.roles?.[0];
+                if (!role) {
+                    throw new Error('No role found in response');
+                }
+
+                // Create a user object with the role
+                const userData = {
+                    email: user.email,
+                    role: role
+                };
+                
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(userData));
-                
-                // Set the default Authorization header for future requests
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 
                 return { token, user: userData };
             }
             throw new Error('Invalid response from server');
         } catch (error) {
+            console.error('Login error:', error);
             if (error.response) {
-                const errorMessage = error.response.data || 'Invalid email or password';
-                throw new Error(errorMessage);
+                throw new Error(error.response.data || 'Authentication failed');
             } else if (error.request) {
-                throw new Error('Unable to connect to the server. Please check your internet connection.');
-            } else {
-                throw error;
+                throw new Error('Network error. Please check your connection');
             }
+            throw error;
         }
     },
 
@@ -51,35 +75,17 @@ export const authService = {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             }
-        } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
-            // Clear all auth-related data
+            // Clear all auth data
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            // Remove any cached data
-            sessionStorage.clear();
-            // Reset axios default headers
             delete axios.defaults.headers.common['Authorization'];
-        }
-    },
-
-    registerCustomer: async (formData) => {
-        try {
-            const response = await axios.post(`${API_URL}/register-customer`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                }
-            });
-            return response.data;
         } catch (error) {
-            if (error.response) {
-                throw new Error(error.response.data || 'Registration failed');
-            } else if (error.request) {
-                throw new Error('Unable to connect to the server. Please check your internet connection.');
-            } else {
-                throw error;
-            }
+            console.error('Logout error:', error);
+            // Still clear local data even if server request fails
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            delete axios.defaults.headers.common['Authorization'];
+            throw error;
         }
     },
 
@@ -88,8 +94,8 @@ export const authService = {
     },
 
     getUser: () => {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
+        const userStr = localStorage.getItem('user');
+        return userStr ? JSON.parse(userStr) : null;
     },
 
     isAuthenticated: () => {
@@ -97,57 +103,12 @@ export const authService = {
         if (!token) return false;
 
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const expiry = payload.exp * 1000; // Convert to milliseconds
-            
-            // Check if token is expired or will expire in the next 5 minutes
-            const expiresIn = expiry - Date.now();
-            if (expiresIn <= 0) {
-                authService.logout(); // Auto logout if token is expired
-                return false;
-            }
-            
-            // If token will expire in less than 5 minutes, we could implement token refresh here
-            if (expiresIn < 300000) { // 5 minutes in milliseconds
-                console.warn('Token will expire soon');
-                // TODO: Implement token refresh logic here
-            }
-            
-            return true;
+            // Get the user from storage instead of parsing token
+            const user = authService.getUser();
+            return !!user;
         } catch (e) {
-            console.error('Error parsing token:', e);
+            console.error('Error checking authentication:', e);
             return false;
         }
     }
 };
-
-// Add axios interceptor to include token in all requests
-axios.interceptors.request.use(
-    (config) => {
-        const token = authService.getToken();
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-// Add response interceptor to handle unauthorized responses
-axios.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        if (error.response?.status === 401) {
-            // Clear auth data on unauthorized response
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            delete axios.defaults.headers.common['Authorization'];
-            
-            // Redirect to login page
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);

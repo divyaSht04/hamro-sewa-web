@@ -23,6 +23,8 @@ import { ServiceProviderProfile } from "./pages/serviceProvider/Profile"
 import { PrivateRoute } from "./auth/PrivateRoute"
 import { AuthProvider } from "./auth/AuthContext"
 import { Toaster } from "react-hot-toast"
+import { ROLES } from "./constants/roles"
+import { AccessDenied } from "./pages/AccessDenied"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -88,6 +90,7 @@ function AppContent() {
     "/provider",
     "/provider/dashboard",
     "/provider/services",
+    "/access-denied"
   ].includes(location.pathname)
 
   return (
@@ -95,6 +98,7 @@ function AppContent() {
       {showHeaderFooter && <Header />}
       <main className="flex-grow">
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/services" element={<ServicePage />} />
@@ -103,11 +107,23 @@ function AppContent() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/register/user" element={<UserRegisterPage />} />
           <Route path="/register/provider" element={<ProviderRegisterPage />} />
-          <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route path="/access-denied" element={<AccessDenied />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/edit-profile"
+            element={
+              <PrivateRoute>
+                <EditProfilePage />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Admin Routes */}
           <Route
             path="/admin"
             element={
-              <PrivateRoute roles={["ROLE_ADMIN"]}>
+              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
                 <AdminDashboard />
               </PrivateRoute>
             }
@@ -115,7 +131,7 @@ function AppContent() {
           <Route
             path="/admin/services"
             element={
-              <PrivateRoute roles={["ROLE_ADMIN"]}>
+              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
                 <ServiceList />
               </PrivateRoute>
             }
@@ -123,15 +139,17 @@ function AppContent() {
           <Route
             path="/admin/profile"
             element={
-              <PrivateRoute roles={["ROLE_ADMIN"]}>
+              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
                 <AdminProfile />
               </PrivateRoute>
             }
           />
+
+          {/* Service Provider Routes */}
           <Route
             path="/provider"
             element={
-              <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
+              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
                 <ServiceProviderDashboard />
               </PrivateRoute>
             }
@@ -139,7 +157,7 @@ function AppContent() {
           <Route
             path="/provider/services"
             element={
-              <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
+              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
                 <ServiceProviderServiceList />
               </PrivateRoute>
             }
@@ -147,7 +165,7 @@ function AppContent() {
           <Route
             path="/provider/profile"
             element={
-              <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
+              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
                 <ServiceProviderProfile />
               </PrivateRoute>
             }
@@ -169,4 +187,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
