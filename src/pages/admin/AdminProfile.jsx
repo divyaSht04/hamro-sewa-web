@@ -1,8 +1,23 @@
-import { useState, useRef } from "react"
-import { User, Mail, Phone, Camera, Calendar, MapPin, Building } from "lucide-react"
+import { useState, useRef, useNavigate } from "react"
+import { useAuth } from "../../auth/AuthContext";
+import { User, Mail, Phone, Camera, Calendar, MapPin, Building, LogOut } from "lucide-react"
 import AdminLayout from "../../components/admin/AdminLayout"
+import toast from "react-hot-toast";
 
 const AdminProfile = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
+  };
+
   const [profile, setProfile] = useState({
     name: "John Doe",
     email: "john.doe@example.com",
@@ -47,7 +62,16 @@ const AdminProfile = () => {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-semibold text-gray-800">Admin Profile</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold text-gray-800">Admin Profile</h2>
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+            </div>
             <p className="mt-1 text-sm text-gray-600">Update your profile information and settings</p>
           </div>
 
@@ -204,4 +228,3 @@ const AdminProfile = () => {
 }
 
 export default AdminProfile
-

@@ -15,31 +15,35 @@ export const AuthProvider = ({ children }) => {
   const location = useLocation();
 
   const handleError = (error) => {
-    let message = 'An unexpected error occurred';
+    let message = error.message || 'An unexpected error occurred';
     
     if (error.response) {
         switch (error.response.status) {
             case 400:
-                message = error.response.data.message || 'Invalid request';
+                message = error.response.data || 'Invalid request';
                 break;
             case 401:
-                message = 'Unauthorized access';
-                setUser(null);
-                setUserRole(null);
-                navigate('/login');
+                if (!location.pathname.includes('/login')) {
+                    message = 'Session expired. Please login again.';
+                    setUser(null);
+                    setUserRole(null);
+                    navigate('/login');
+                } else {
+                    message = error.response.data || 'Incorrect password. Please try again.';
+                }
                 break;
             case 403:
                 message = 'Access forbidden';
                 navigate('/access-denied');
                 break;
             case 404:
-                message = 'Resource not found';
+                message = error.response.data || 'Email not found. Please check your email address.';
                 break;
             case 500:
                 message = 'Server error. Please try again later';
                 break;
             default:
-                message = error.response.data?.message || message;
+                message = error.response.data || message;
         }
     } else if (error.request) {
         message = 'Network error. Please check your connection';

@@ -1,10 +1,24 @@
 import { useState } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { LayoutDashboard, List, UserCog, LogOut, Menu, X, Bell } from "lucide-react"
+import { useAuth } from "../../auth/AuthContext"
+import toast from "react-hot-toast"
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const isActive = (path) => location.pathname === path
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success("Logged out successfully")
+      navigate("/login")
+    } catch (error) {
+      toast.error("Failed to logout")
+    }
+  }
 
   const navItems = [
     { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -42,13 +56,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         </ul>
       </nav>
       <div className="absolute bottom-4 left-4 right-4">
-        <Link
-          to="/logout"
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/5 hover:text-white transition-colors w-full"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>
-        </Link>
+        </button>
       </div>
     </div>
   )
@@ -90,4 +104,3 @@ const AdminLayout = ({ children }) => {
 }
 
 export default AdminLayout
-

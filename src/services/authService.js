@@ -8,9 +8,11 @@ axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear local storage and redirect to login
-            localStorage.clear();
-            window.location.href = '/login';
+            // Don't automatically redirect on 401 during login
+            if (!error.config.url.includes('/login')) {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -58,8 +60,24 @@ export const authService = {
             throw new Error('Invalid response from server');
         } catch (error) {
             console.error('Login error:', error);
+            
+            // Handle specific error cases
             if (error.response) {
-                throw new Error(error.response.data || 'Authentication failed');
+                const status = error.response.status;
+                const errorMessage = error.response.data;
+
+                switch (status) {
+                    case 401:
+                        throw new Error('Incorrect password. Please try again.');
+                    case 404:
+                        throw new Error('Email not found. Please check your email address.');
+                    case 400:
+                        throw new Error(errorMessage || 'Invalid login request');
+                    case 500:
+                        throw new Error('Server error. Please try again later.');
+                    default:
+                        throw new Error(errorMessage || 'Authentication failed');
+                }
             } else if (error.request) {
                 throw new Error('Network error. Please check your connection');
             }
