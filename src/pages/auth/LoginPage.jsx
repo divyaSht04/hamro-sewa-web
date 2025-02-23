@@ -3,24 +3,33 @@ import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { UserPlus } from "lucide-react"
 import { AuthForm } from '../../components/auth/AuthFrom'
-import { authService } from "../../services/authService"
+import { useAuth } from '../../auth/AuthContext'
 import { toast } from "react-hot-toast"
 
 export function LoginPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const { login } = useAuth()
 
   const handleSubmit = async (formData) => {
     setIsLoading(true)
+    setError("")
+    
     try {
-      console.log("Login attempt with:", formData)
-      const token = await authService.login(formData.email, formData.password)
-      console.log("Login successful, token:", token)
-      toast.success('Login successful!')
-      navigate('/')
+      if (!formData.email || !formData.password) {
+        throw new Error("Email and password are required")
+      }
+
+      const { success, error } = await login(formData.email, formData.password)
+      
+      if (!success && error) {
+        throw new Error(error)
+      }
     } catch (error) {
       console.error("Login error:", error)
-      toast.error(error.toString() || 'Login failed')
+      setError(error.message)
+      toast.error(error.message || 'Login failed')
     } finally {
       setIsLoading(false)
     }
@@ -36,14 +45,6 @@ export function LoginPage() {
           className="flex-1 p-8"
         >
           <div className="text-center mb-8">
-            <motion.img
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
-              src="/logo.png"
-              alt="Hamro Sewa Logo"
-              className="w-16 h-16 mx-auto mb-4"
-            />
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -62,7 +63,17 @@ export function LoginPage() {
             </motion.p>
           </div>
 
-          <AuthForm type="login" onSubmit={handleSubmit} />
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <AuthForm type="login" onSubmit={handleSubmit} isLoading={isLoading} />
 
           <motion.div
             initial={{ opacity: 0 }}

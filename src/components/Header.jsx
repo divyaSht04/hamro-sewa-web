@@ -82,44 +82,70 @@ function Header() {
             </nav>
             <div className="hidden md:flex items-center space-x-4">
               {isAuthenticated ? (
-                <div className="relative group">
-                  <button className="flex items-center space-x-2 text-sm bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors duration-200">
-                    <User size={16} />
-                    <span>{user.username}</span>
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden z-10 hidden group-hover:block">
-                    {authItems.map((item, index) =>
-                      item.onClick ? (
-                        <button
-                          key={index}
-                          onClick={item.onClick}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          {item.name}
-                        </button>
-                      ) : (
-                        <Link
-                          key={index}
-                          to={item.path}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          {item.name}
-                        </Link>
-                      ),
-                    )}
+                <>
+                  <div className="relative group">
+                    <button 
+                      className={`flex items-center space-x-2 text-sm px-4 py-2 rounded-md transition-colors duration-200 ${
+                        isScrolled 
+                          ? "bg-gray-700 text-white hover:bg-gray-600" 
+                          : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      }`}
+                    >
+                      <User size={16} />
+                      <span>{user?.username || 'User'}</span>
+                    </button>
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden z-10 hidden group-hover:block">
+                      {authItems.filter(item => item.name !== 'Logout').map((item, index) =>
+                        item.onClick ? (
+                          <button
+                            key={index}
+                            onClick={item.onClick}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            {item.name}
+                          </button>
+                        ) : (
+                          <Link
+                            key={index}
+                            to={item.path}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            {item.name}
+                          </Link>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
+                  <button
+                    onClick={logout}
+                    className={`text-sm font-medium px-4 py-2 rounded-md transition-colors duration-200 ${
+                      isScrolled
+                        ? "bg-red-500 text-white hover:bg-red-600"
+                        : "bg-red-500 text-white hover:bg-red-600"
+                    }`}
+                  >
+                    Logout
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
                     to="/login"
-                    className="text-sm bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors duration-200"
+                    className={`text-sm font-medium px-4 py-2 rounded-md transition-colors duration-200 ${
+                      isScrolled
+                        ? "bg-purple-500 text-white hover:bg-purple-600"
+                        : "bg-purple-500 text-white hover:bg-purple-600"
+                    }`}
                   >
                     Login
                   </Link>
                   <Link
                     to="/register"
-                    className="text-sm bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors duration-200"
+                    className={`text-sm font-medium px-4 py-2 rounded-md border transition-colors duration-200 ${
+                      isScrolled
+                        ? "border-purple-500 text-white hover:bg-purple-500"
+                        : "border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white"
+                    }`}
                   >
                     Register
                   </Link>
@@ -128,16 +154,12 @@ function Header() {
             </div>
             <div className="md:hidden">
               <button
-                type="button"
-                className={`${isScrolled ? "text-white" : "text-gray-800"} hover:text-purple-600 focus:outline-none`}
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`p-2 rounded-md ${
+                  isScrolled ? "text-white" : "text-gray-800"
+                }`}
               >
-                <span className="sr-only">Open menu</span>
-                {isMenuOpen ? (
-                  <X className="h-6 w-6" aria-hidden="true" />
-                ) : (
-                  <Menu className="h-6 w-6" aria-hidden="true" />
-                )}
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
@@ -146,40 +168,80 @@ function Header() {
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-20 bg-gray-900 bg-opacity-90 backdrop-blur-sm">
-          <div className="flex flex-col h-full justify-center items-center">
+        <div className="md:hidden bg-white shadow-lg">
+          <div className="px-4 pt-2 pb-3 space-y-1">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.path}
-                className="text-white text-2xl font-medium py-4 hover:text-purple-300 transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive(item.path)
+                    ? "bg-purple-500 text-white"
+                    : "text-gray-800 hover:bg-purple-50 hover:text-purple-500"
+                }`}
               >
                 {item.name}
               </Link>
             ))}
-            {authItems.map((item, index) =>
-              item.onClick ? (
-                <button
-                  key={index}
-                  onClick={() => {
-                    item.onClick()
-                    setIsMenuOpen(false)
-                  }}
-                  className="text-white text-2xl font-medium py-4 hover:text-purple-300 transition-colors duration-200"
-                >
-                  {item.name}
-                </button>
-              ) : (
+            
+            {isAuthenticated ? (
+              <>
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="px-3 py-2 text-sm font-medium text-gray-500">
+                    Signed in as {user?.username || 'User'}
+                  </div>
+                  {authItems.filter(item => item.name !== 'Logout').map((item, index) =>
+                    item.onClick ? (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          item.onClick();
+                          setIsMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-3 py-2 text-base font-medium text-gray-800 hover:bg-purple-50 hover:text-purple-500"
+                      >
+                        {item.name}
+                      </button>
+                    ) : (
+                      <Link
+                        key={index}
+                        to={item.path}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block px-3 py-2 text-base font-medium text-gray-800 hover:bg-purple-50 hover:text-purple-500"
+                      >
+                        {item.name}
+                      </Link>
+                    )
+                  )}
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 mt-2 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-md"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="border-t border-gray-200 pt-4">
                 <Link
-                  key={index}
-                  to={item.path}
-                  className="text-white text-2xl font-medium py-4 hover:text-purple-300 transition-colors duration-200"
+                  to="/login"
                   onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 text-base font-medium text-white bg-purple-500 hover:bg-purple-600 rounded-md"
                 >
-                  {item.name}
+                  Login
                 </Link>
-              ),
+                <Link
+                  to="/register"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 mt-2 text-base font-medium text-purple-500 border border-purple-500 hover:bg-purple-500 hover:text-white rounded-md"
+                >
+                  Register
+                </Link>
+              </div>
             )}
           </div>
         </div>

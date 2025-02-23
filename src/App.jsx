@@ -21,6 +21,8 @@ import { ServiceProviderDashboard } from "./pages/serviceProvider/Dashboard"
 import { ServiceProviderServiceList } from "./pages/serviceProvider/ServiceList"
 import { ServiceProviderProfile } from "./pages/serviceProvider/Profile"
 import { PrivateRoute } from "./auth/PrivateRoute"
+import { AuthProvider } from "./auth/AuthContext"
+import { Toaster } from "react-hot-toast"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -139,15 +141,15 @@ function AppContent() {
             element={
               <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
                 <ServiceProviderServiceList />
-              // </PrivateRoute>
+              </PrivateRoute>
             }
           />
-           <Route
+          <Route
             path="/provider/profile"
             element={
-              // <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
+              <PrivateRoute roles={["ROLE_SERVICE_PROVIDER"]}>
                 <ServiceProviderProfile />
-              // </PrivateRoute>
+              </PrivateRoute>
             }
           />
         </Routes>
@@ -159,7 +161,12 @@ function AppContent() {
 }
 
 function App() {
-  return <AppContent />
+  return (
+    <AuthProvider>
+      <Toaster position="top-right" />
+      <AppContent />
+    </AuthProvider>
+  );
 }
 
 export default App
