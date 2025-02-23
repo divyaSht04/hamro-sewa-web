@@ -45,18 +45,15 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    if (type === "edit" && onSubmit) {
-      onSubmit(formData)
-    } else {
-      console.log("Form submitted:", formData)
-      // Add your authentication logic here
+    try {
+      if (onSubmit) {
+        await onSubmit(formData)
+      }
+    } catch (error) {
+      console.error("Form submission error:", error)
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (

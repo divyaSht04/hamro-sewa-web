@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { UserPlus } from "lucide-react"
 import { AuthForm } from '../../components/auth/AuthFrom'
+import { authService } from "../../services/authService"
+import { toast } from "react-hot-toast"
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -10,13 +12,18 @@ export function LoginPage() {
 
   const handleSubmit = async (formData) => {
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    console.log("Login form submitted:", formData)
-    setIsLoading(false)
-    // Add your login logic here
-    // If login is successful, navigate to the dashboard
-    // navigate('/dashboard')
+    try {
+      console.log("Login attempt with:", formData)
+      const token = await authService.login(formData.email, formData.password)
+      console.log("Login successful, token:", token)
+      toast.success('Login successful!')
+      navigate('/')
+    } catch (error) {
+      console.error("Login error:", error)
+      toast.error(error.toString() || 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -96,4 +103,3 @@ export function LoginPage() {
     </div>
   )
 }
-
