@@ -35,20 +35,20 @@ export const authService = {
             if (response.data) {
                 const { token, user } = response.data;
                 
-                if (!token || !user) {
+                if (!token || !user || !user.roles) {
                     throw new Error('Invalid response format from server');
                 }
 
                 // Get the role from user.roles array
-                const role = user.roles?.[0];
-                if (!role) {
-                    throw new Error('No role found in response');
+                const userRoles = user.roles;
+                if (!userRoles.length) {
+                    throw new Error('No roles found in response');
                 }
 
                 // Create a user object with the role
                 const userData = {
                     email: user.email,
-                    role: role
+                    role: userRoles[0] // Use the first role
                 };
                 
                 localStorage.setItem('token', token);

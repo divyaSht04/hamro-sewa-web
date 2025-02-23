@@ -123,7 +123,7 @@ function AppContent() {
           <Route
             path="/admin"
             element={
-              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
+              <PrivateRoute requiredRoles={[ROLES.ADMIN]}>
                 <AdminDashboard />
               </PrivateRoute>
             }
@@ -131,7 +131,7 @@ function AppContent() {
           <Route
             path="/admin/services"
             element={
-              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
+              <PrivateRoute requiredRoles={[ROLES.ADMIN]}>
                 <ServiceList />
               </PrivateRoute>
             }
@@ -139,7 +139,7 @@ function AppContent() {
           <Route
             path="/admin/profile"
             element={
-              <PrivateRoute requiredRoles={['ROLE_ADMIN']}>
+              <PrivateRoute requiredRoles={[ROLES.ADMIN]}>
                 <AdminProfile />
               </PrivateRoute>
             }
@@ -149,7 +149,7 @@ function AppContent() {
           <Route
             path="/provider"
             element={
-              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
                 <ServiceProviderDashboard />
               </PrivateRoute>
             }
@@ -157,7 +157,7 @@ function AppContent() {
           <Route
             path="/provider/services"
             element={
-              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
                 <ServiceProviderServiceList />
               </PrivateRoute>
             }
@@ -165,7 +165,7 @@ function AppContent() {
           <Route
             path="/provider/profile"
             element={
-              <PrivateRoute requiredRoles={['ROLE_SERVICE_PROVIDER']}>
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
                 <ServiceProviderProfile />
               </PrivateRoute>
             }

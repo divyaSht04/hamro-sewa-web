@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { authService } from '../services/authService';
-import { ROLES, ROLE_PATHS } from '../constants/roles';
+import { ROLE_PATHS } from '../constants/roles';
 
 const AuthContext = createContext(null);
 
@@ -69,12 +69,14 @@ export const AuthProvider = ({ children }) => {
         // Redirect based on role
         const rolePath = ROLE_PATHS[response.user.role] || '/';
         const from = location.state?.from?.pathname || rolePath;
+
+        console.log(rolePath, from);
         
         toast.success('Login successful! Welcome back!');
         // Small delay to ensure toast is visible
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        navigate(from, { replace: true });
+        navigate(rolePath, { replace: true });
         return { success: true };
       }
       

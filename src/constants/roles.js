@@ -7,5 +7,5 @@ export const ROLES = {
 export const ROLE_PATHS = {
     [ROLES.ADMIN]: '/admin',
     [ROLES.CUSTOMER]: '/',
-    [ROLES.SERVICE_PROVIDER]: '/provider/dashboard'
+    [ROLES.SERVICE_PROVIDER]: '/provider'
 };

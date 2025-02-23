@@ -18,7 +18,11 @@ export const PrivateRoute = ({ children, requiredRoles = [], LoadingComponent = 
   console.log('User role:', user?.role);
   console.log('User object:', user);
 
-  if (requiredRoles.length > 0 && !requiredRoles.includes(user?.role)) {
+  // Check if the user has the required role
+  const hasRequiredRole = requiredRoles.length === 0 || (user?.role && requiredRoles.includes(user.role));
+
+  if (!hasRequiredRole) {
+    console.log('Access denied - user role does not match required roles');
     return <Navigate to="/access-denied" replace />;
   }
 
