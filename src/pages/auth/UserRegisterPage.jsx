@@ -2,17 +2,20 @@ import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { LogIn } from "lucide-react"
 import { AuthForm } from "../../components/auth/AuthFrom"
+import { registerCustomer } from "../../services/registrationService"
+import toast from "react-hot-toast"
 
 export function UserRegisterPage() {
   const navigate = useNavigate()
 
   const handleSubmit = async (formData) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    console.log("User registration form submitted:", formData)
-    // Add your registration logic here
-    // If registration is successful, navigate to the login page
-    // navigate('/login')
+    try {
+      const response = await registerCustomer(formData)
+      toast.success("Registration successful! Please login to continue.")
+      navigate('/login')
+    } catch (error) {
+      toast.error(error.message || "Registration failed. Please try again.")
+    }
   }
 
   return (
@@ -92,4 +95,3 @@ export function UserRegisterPage() {
     </div>
   )
 }
-

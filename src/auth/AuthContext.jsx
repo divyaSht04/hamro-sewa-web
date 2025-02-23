@@ -66,14 +66,13 @@ export const AuthProvider = ({ children }) => {
         setUser(response.user);
         setUserRole(response.user.role);
         
-        // Redirect based on role
+        // Redirect based on role 
         const rolePath = ROLE_PATHS[response.user.role] || '/';
-        const from = location.state?.from?.pathname || rolePath;
+        // const from = location.state?.from?.pathname || rolePath;
 
-        console.log(rolePath, from);
+        console.log(rolePath);
         
         toast.success('Login successful! Welcome back!');
-        // Small delay to ensure toast is visible
         await new Promise(resolve => setTimeout(resolve, 500));
         
         navigate(rolePath, { replace: true });

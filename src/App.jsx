@@ -21,6 +21,7 @@ import { ServiceProviderDashboard } from "./pages/serviceProvider/Dashboard"
 import { ServiceProviderServiceList } from "./pages/serviceProvider/ServiceList"
 import { ServiceProviderProfile } from "./pages/serviceProvider/Profile"
 import { PrivateRoute } from "./auth/PrivateRoute"
+import { PublicRoute } from "./auth/PublicRoute"
 import { AuthProvider } from "./auth/AuthContext"
 import { Toaster } from "react-hot-toast"
 import { ROLES } from "./constants/roles"
@@ -103,10 +104,26 @@ function AppContent() {
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/services" element={<ServicePage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/register/user" element={<UserRegisterPage />} />
-          <Route path="/register/provider" element={<ProviderRegisterPage />} />
+          <Route path="/login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
+          <Route path="/register" element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          } />
+          <Route path="/register/user" element={
+            <PublicRoute>
+              <UserRegisterPage />
+            </PublicRoute>
+          } />
+          <Route path="/register/provider" element={
+            <PublicRoute>
+              <ProviderRegisterPage />
+            </PublicRoute>
+          } />
           <Route path="/access-denied" element={<AccessDenied />} />
 
           {/* Protected Routes */}

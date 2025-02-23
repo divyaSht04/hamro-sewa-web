@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera } from "lucide-react"
+import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera, Home } from "lucide-react"
 import LoadingSpinner from "../ui/LoadingSpinner.jsx"
 
 export function AuthForm({ type, userType, initialData, onSubmit }) {
@@ -14,6 +14,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
           username: "",
           dateOfBirth: "",
           phoneNumber: "",
+          address: "",
           photo: null,
           ...(userType === "provider" && {
             serviceCategory: "",
@@ -98,6 +99,18 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="Phone Number"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+          <div className="relative">
+            <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Address"
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
