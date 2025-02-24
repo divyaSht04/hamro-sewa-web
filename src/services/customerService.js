@@ -4,36 +4,40 @@ const API_BASE_URL = 'http://localhost:8084';
 
 export const getCustomerInfo = async (customerId) => {
   try {
-    console.log('Fetching customer info for ID:', customerId); // Debug log
     const response = await axios.get(`${API_BASE_URL}/customer/info/${customerId}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}` // Add token for authentication
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    console.log('Customer info response:', response.data); // Debug log
     return response.data;
   } catch (error) {
-    console.error('Error in getCustomerInfo:', error.response || error); // Debug log
     if (error.response?.status === 401) {
       throw new Error('Please login again to continue');
     }
-    if (error.response) {
-      throw new Error(error.response.data || 'Failed to fetch customer information');
-    }
-    throw new Error('Network error occurred');
+    throw new Error(error.response?.data || 'Failed to fetch customer information');
   }
 };
 
 export const updateCustomerProfile = async (customerId, customerData) => {
   try {
-    console.log('Updating customer profile:', { customerId, customerData }); // Debug log
+    let imageUrl = null;
 
-    // If there's a new image, handle it separately
-    if (customerData.photo) {
+    // If there's a new photo, upload it first
+    if (customerData.photo instanceof File) {
       const formData = new FormData();
       formData.append('image', customerData.photo);
-      // Handle image upload if needed
-      console.log('Handling image upload'); // Debug log
+      
+      const imageResponse = await axios.post(
+        `${API_BASE_URL}/customer/upload-photo/${customerId}`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      imageUrl = imageResponse.data;
     }
 
     // Send the profile update
@@ -46,25 +50,21 @@ export const updateCustomerProfile = async (customerId, customerData) => {
         address: customerData.address,
         dateOfBirth: customerData.dateOfBirth,
         fullName: customerData.fullName,
+        photo: imageUrl || customerData.photo
       },
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Add token for authentication
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
-    console.log('Update response:', response.data); // Debug log
     return response.data;
   } catch (error) {
-    console.error('Error in updateCustomerProfile:', error.response || error); // Debug log
     if (error.response?.status === 401) {
       throw new Error('Please login again to continue');
     }
-    if (error.response) {
-      throw new Error(error.response.data || 'Failed to update profile');
-    }
-    throw new Error('Network error occurred');
+    throw new Error(error.response?.data || 'Failed to update profile');
   }
 };

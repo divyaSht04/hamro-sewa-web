@@ -1,22 +1,29 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { AuthForm } from "../../components/auth/AuthFrom"
-import { getCustomerInfo, updateCustomerProfile } from "../../services/customerService"
 import { useAuth } from "../../auth/AuthContext"
+import { getCustomerInfo, updateCustomerProfile } from "../../services/customerService"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
+import { FiUser, FiMail, FiPhone, FiHome, FiCalendar, FiCamera } from "react-icons/fi"
 
 export function EditProfilePage() {
   const [loading, setLoading] = useState(true)
-  const [userData, setUserData] = useState(null)
+  const [formData, setFormData] = useState({
+    username: "",
+    fullName: "",
+    dateOfBirth: "",
+    phoneNumber: "",
+    address: "",
+    email: "",
+    photo: null
+  })
+  const [photoPreview, setPhotoPreview] = useState(null)
   const { user } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        console.log("Current user:", user) // Debug log
-        console.log("Current user:", user) // Debug log
         if (!user?.id) {
           toast.error("User ID not found")
           setLoading(false)
@@ -24,8 +31,6 @@ export function EditProfilePage() {
         }
 
         const data = await getCustomerInfo(user.id)
-        console.log("Fetched customer data:", data) // Debug log
-
         if (!data || data.length === 0) {
           toast.error("No customer data found")
           setLoading(false)
@@ -33,17 +38,20 @@ export function EditProfilePage() {
         }
 
         const customerInfo = data[0]
-        setUserData({
+        setFormData({
           username: customerInfo.username || "",
-          email: customerInfo.email || "",
+          fullName: customerInfo.fullName || "",
+          dateOfBirth: customerInfo.dateOfBirth || "",
           phoneNumber: customerInfo.phoneNumber || "",
           address: customerInfo.address || "",
-          dateOfBirth: customerInfo.dateOfBirth || "",
-          fullName: customerInfo.fullName || "",
-          userType: "customer"
+          email: customerInfo.email || "",
+          photo: null
         })
+        
+        if (customerInfo.photo) {
+          setPhotoPreview(customerInfo.photo)
+        }
       } catch (error) {
-        console.error("Error fetching customer data:", error) // Debug log
         toast.error(error.message || "Failed to fetch profile data")
       } finally {
         setLoading(false)
@@ -53,14 +61,26 @@ export function EditProfilePage() {
     fetchUserData()
   }, [user])
 
-  const handleSubmit = async (updatedData) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setFormData(prev => ({ ...prev, photo: file }))
+      setPhotoPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     try {
-      console.log("Submitting updated data:", updatedData) // Debug log
-      await updateCustomerProfile(user.id, updatedData)
+      await updateCustomerProfile(user.id, formData)
       toast.success("Profile updated successfully!")
-      navigate("/customer/profile")
+      navigate("/customer/profile", { replace: true })
     } catch (error) {
-      console.error("Error updating profile:", error) // Debug log
       toast.error(error.message || "Failed to update profile")
     }
   }
@@ -73,28 +93,127 @@ export function EditProfilePage() {
     )
   }
 
-  // Debug log for render
-  console.log("Rendering with userData:", userData)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md"
+        className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md"
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Edit Profile</h1>
-        {userData ? (
-          <AuthForm 
-            type="edit" 
-            userType="customer" 
-            initialData={userData} 
-            onSubmit={handleSubmit} 
-          />
-        ) : (
-          <div className="text-center text-gray-600">No profile data available</div>
-        )}
+        <h1 className="text-2xl font-bold text-center mb-8">Edit Profile</h1>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Photo Upload */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl text-gray-400">{formData.fullName?.charAt(0) || "U"}</span>
+                )}
+              </div>
+              <label htmlFor="photo" className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2 cursor-pointer hover:bg-blue-600 transition-colors">
+                <FiCamera className="text-white" />
+                <input
+                  type="file"
+                  id="photo"
+                  name="photo"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <span className="text-sm text-gray-500 mt-2">Upload Photo</span>
+          </div>
+
+          {/* Username */}
+          <div className="relative">
+            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Username"
+            />
+          </div>
+
+          {/* Full Name */}
+          <div className="relative">
+            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Full Name"
+            />
+          </div>
+
+          {/* Date of Birth */}
+          <div className="relative">
+            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="date"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Phone */}
+          <div className="relative">
+            <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Phone Number"
+            />
+          </div>
+
+          {/* Address */}
+          <div className="relative">
+            <FiHome className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Address"
+            />
+          </div>
+
+          {/* Email */}
+          <div className="relative">
+            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Email"
+              readOnly
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Update Profile
+          </button>
+        </form>
       </motion.div>
     </div>
   )

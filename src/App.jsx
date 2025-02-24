@@ -26,6 +26,7 @@ import { Toaster } from "react-hot-toast"
 import { ROLES } from "./constants/roles"
 import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
+import { CustomerProfile } from "./pages/customer/CustomerProfile"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -189,6 +190,14 @@ function AppContent() {
           />
 
           {/* Customer Routes */}
+          <Route
+            path="/customer/profile"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
+                <CustomerProfile />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="/customer/edit-profile"
             element={
