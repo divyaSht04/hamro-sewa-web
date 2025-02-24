@@ -8,9 +8,12 @@ import { getCustomerInfo } from "../../services/customerService"
 import { FiEdit2, FiMail, FiPhone, FiMapPin, FiCalendar } from "react-icons/fi"
 import toast from "react-hot-toast"
 
+const API_BASE_URL = 'http://localhost:8084';
+
 export function CustomerProfile() {
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -24,13 +27,25 @@ export function CustomerProfile() {
         }
 
         const data = await getCustomerInfo(user.id)
+        console.log("Profile data:", data)
         if (!data || data.length === 0) {
           toast.error("No profile data found")
           setLoading(false)
           return
         }
 
-        setProfileData(data[0])
+        // Transform image URL if it exists
+        const profileInfo = data[0];
+        console.log("Profile info:", profileInfo)
+        console.log(`${API_BASE_URL}/uploads/${profileInfo.image}`)
+        console.log("Check  "+!profileInfo.image.startsWith('http'))
+        console.log(profileInfo.image)
+        if (profileInfo.image && !profileInfo.image.startsWith('http')) {
+          profileInfo.image = `${API_BASE_URL}/uploads/${profileInfo.image}`;
+          console.log("This is profile iinfo: "+ profileInfo.image)
+        }
+
+        setProfileData(profileInfo)
       } catch (error) {
         console.error("Error fetching profile:", error)
         toast.error("Failed to load profile data")
@@ -44,6 +59,11 @@ export function CustomerProfile() {
 
   const handleEditProfile = () => {
     navigate("/customer/edit-profile")
+  }
+
+  const handleImageError = () => {
+    console.log("Image failed to load")
+    setImageError(true)
   }
 
   if (loading) {
@@ -66,15 +86,18 @@ export function CustomerProfile() {
         <div className="relative h-48 bg-gradient-to-r from-blue-500 to-blue-600">
           <div className="absolute -bottom-16 w-full flex justify-center">
             <div className="relative">
-              {profileData?.photo ? (
+              {profileData?.image && !imageError ? (
                 <img
-                  src={profileData.photo || "/placeholder.svg"}
+                  src={profileData.image}
                   alt={profileData?.fullName}
+                  onError={handleImageError}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
                 />
               ) : (
                 <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center">
-                  <span className="text-4xl font-bold text-gray-400">{profileData?.fullName?.charAt(0) || "U"}</span>
+                  <span className="text-4xl font-bold text-gray-400">
+                    {profileData?.fullName?.charAt(0) || "U"}
+                  </span>
                 </div>
               )}
             </div>
@@ -143,4 +166,3 @@ export function CustomerProfile() {
     </div>
   )
 }
-

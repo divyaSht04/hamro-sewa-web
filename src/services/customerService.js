@@ -9,62 +9,59 @@ export const getCustomerInfo = async (customerId) => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
+
+    // Transform the response to include full image URL if image exists
+    if (response.data && response.data.length > 0) {
+      const customerData = response.data[0];
+      if (customerData.image) {
+        customerData.image = `${API_BASE_URL}/uploads/${customerData.image}`;
+        console.log("Image URL:", customerData.image);
+      }
+    }
+
     return response.data;
   } catch (error) {
-    if (error.response?.status === 401) {
-      throw new Error('Please login again to continue');
-    }
-    throw new Error(error.response?.data || 'Failed to fetch customer information');
+    console.error("Error in getCustomerInfo:", error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch customer information');
   }
 };
 
 export const updateCustomerProfile = async (customerId, customerData) => {
   try {
-    let imageUrl = null;
+    // Create FormData for sending both profile data and image
+    const formData = new FormData();
 
-    // If there's a new photo, upload it first
-    if (customerData.photo instanceof File) {
-      const formData = new FormData();
-      formData.append('image', customerData.photo);
-      
-      const imageResponse = await axios.post(
-        `${API_BASE_URL}/customer/upload-photo/${customerId}`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data'
-          }
+    // Add all text fields to FormData
+    Object.keys(customerData).forEach(key => {
+      if (key === 'image') {
+        if (customerData.image instanceof File) {
+          formData.append('image', customerData.image);
         }
-      );
-      imageUrl = imageResponse.data;
+      } else if (customerData[key] !== null && customerData[key] !== undefined) {
+        formData.append(key, customerData[key]);
+      }
+    });
+
+    // Log FormData contents for debugging
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
     }
 
-    // Send the profile update
+    // Update profile data
     const response = await axios.put(
       `${API_BASE_URL}/customer/edit-customer/${customerId}`,
-      {
-        username: customerData.username,
-        email: customerData.email,
-        phoneNumber: customerData.phoneNumber,
-        address: customerData.address,
-        dateOfBirth: customerData.dateOfBirth,
-        fullName: customerData.fullName,
-        photo: imageUrl || customerData.photo
-      },
+      formData,
       {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'multipart/form-data'
+        }
       }
     );
 
     return response.data;
   } catch (error) {
-    if (error.response?.status === 401) {
-      throw new Error('Please login again to continue');
-    }
-    throw new Error(error.response?.data || 'Failed to update profile');
+    console.error("Error in updateCustomerProfile:", error);
+    throw new Error(error.response?.data?.message || 'Failed to update profile');
   }
 };

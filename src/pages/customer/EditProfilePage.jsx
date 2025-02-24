@@ -6,6 +6,8 @@ import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { FiUser, FiMail, FiPhone, FiHome, FiCalendar, FiCamera } from "react-icons/fi"
 
+const API_BASE_URL = 'http://localhost:8084';
+
 export function EditProfilePage() {
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
@@ -15,9 +17,9 @@ export function EditProfilePage() {
     phoneNumber: "",
     address: "",
     email: "",
-    photo: null
+    image: null
   })
-  const [photoPreview, setPhotoPreview] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -38,20 +40,27 @@ export function EditProfilePage() {
         }
 
         const customerInfo = data[0]
+        
         setFormData({
           username: customerInfo.username || "",
           fullName: customerInfo.fullName || "",
-          dateOfBirth: customerInfo.dateOfBirth || "",
+          dateOfBirth: customerInfo.dateOfBirth ? customerInfo.dateOfBirth.split('T')[0] : "",
           phoneNumber: customerInfo.phoneNumber || "",
           address: customerInfo.address || "",
           email: customerInfo.email || "",
-          photo: null
+          image: null
         })
         
-        if (customerInfo.photo) {
-          setPhotoPreview(customerInfo.photo)
+        // Set image preview if image exists
+        if (customerInfo.image) {
+          if (!customerInfo.image.startsWith('http')) {
+            setImagePreview(`${API_BASE_URL}/uploads/${customerInfo.image}`)
+          } else {
+            setImagePreview(customerInfo.image)
+          }
         }
       } catch (error) {
+        console.error("Error fetching user data:", error)
         toast.error(error.message || "Failed to fetch profile data")
       } finally {
         setLoading(false)
@@ -66,22 +75,39 @@ export function EditProfilePage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handlePhotoChange = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      setFormData(prev => ({ ...prev, photo: file }))
-      setPhotoPreview(URL.createObjectURL(file))
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error("Image size should be less than 5MB")
+        return
+      }
+      setFormData(prev => ({ ...prev, image: file }))
+      setImagePreview(URL.createObjectURL(file))
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setLoading(true)
+    
     try {
-      await updateCustomerProfile(user.id, formData)
+      // Create a copy of formData
+      const updatedData = { ...formData }
+
+      // Format date if present
+      if (updatedData.dateOfBirth) {
+        updatedData.dateOfBirth = updatedData.dateOfBirth.split('T')[0]
+      }
+
+      await updateCustomerProfile(user.id, updatedData)
       toast.success("Profile updated successfully!")
-      navigate("/customer/profile", { replace: true })
+      navigate("/customer/profile")
     } catch (error) {
+      console.error("Error updating profile:", error)
       toast.error(error.message || "Failed to update profile")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -104,29 +130,38 @@ export function EditProfilePage() {
         <h1 className="text-2xl font-bold text-center mb-8">Edit Profile</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Photo Upload */}
+          {/* Image Upload */}
           <div className="flex flex-col items-center mb-6">
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+                {imagePreview ? (
+                  <img 
+                    src={imagePreview} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "";
+                      setImagePreview(null);
+                    }}
+                  />
                 ) : (
                   <span className="text-4xl text-gray-400">{formData.fullName?.charAt(0) || "U"}</span>
                 )}
               </div>
-              <label htmlFor="photo" className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2 cursor-pointer hover:bg-blue-600 transition-colors">
+              <label htmlFor="image" className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2 cursor-pointer hover:bg-blue-600 transition-colors">
                 <FiCamera className="text-white" />
                 <input
                   type="file"
-                  id="photo"
-                  name="photo"
+                  id="image"
+                  name="image"
                   accept="image/*"
-                  onChange={handlePhotoChange}
+                  onChange={handleImageChange}
                   className="hidden"
                 />
               </label>
             </div>
-            <span className="text-sm text-gray-500 mt-2">Upload Photo</span>
+            <span className="text-sm text-gray-500 mt-2">Upload Photo (Max 5MB)</span>
           </div>
 
           {/* Username */}
@@ -139,6 +174,7 @@ export function EditProfilePage() {
               onChange={handleChange}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Username"
+              required
             />
           </div>
 
@@ -152,6 +188,7 @@ export function EditProfilePage() {
               onChange={handleChange}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Full Name"
+              required
             />
           </div>
 
@@ -163,6 +200,7 @@ export function EditProfilePage() {
               name="dateOfBirth"
               value={formData.dateOfBirth}
               onChange={handleChange}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -177,6 +215,7 @@ export function EditProfilePage() {
               onChange={handleChange}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Phone Number"
+              required
             />
           </div>
 
@@ -203,15 +242,18 @@ export function EditProfilePage() {
               onChange={handleChange}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Email"
-              readOnly
+              required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={loading}
+            className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Update Profile
+            {loading ? "Updating..." : "Update Profile"}
           </button>
         </form>
       </motion.div>
