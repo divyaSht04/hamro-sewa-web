@@ -14,7 +14,6 @@ import ServiceList from "./pages/admin/ServiceList"
 import AdminProfile from "./pages/admin/AdminProfile"
 import Aos from "aos"
 import "aos/dist/aos.css"
-import { EditProfilePage } from "./pages/user/EditProfilePage"
 import { UserRegisterPage } from "./pages/auth/UserRegisterPage"
 import { ProviderRegisterPage } from "./pages/auth/ProviderRegisterPage"
 import { ServiceProviderDashboard } from "./pages/serviceProvider/Dashboard"
@@ -26,6 +25,7 @@ import { AuthProvider } from "./auth/AuthContext"
 import { Toaster } from "react-hot-toast"
 import { ROLES } from "./constants/roles"
 import { AccessDenied } from "./pages/AccessDenied"
+import { EditProfilePage } from "./pages/customer/EditProfilePage"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -184,6 +184,16 @@ function AppContent() {
             element={
               <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
                 <ServiceProviderProfile />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Customer Routes */}
+          <Route
+            path="/customer/edit-profile"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
+                <EditProfilePage />
               </PrivateRoute>
             }
           />

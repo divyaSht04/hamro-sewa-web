@@ -1,18 +1,21 @@
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { AuthForm } from '../../components/auth/AuthFrom'
 import { LogIn } from "lucide-react"
+import { AuthForm } from "../../components/auth/AuthFrom"
+import { registerServiceProvider } from "../../services/registrationService"
+import toast from "react-hot-toast"
 
 export function ProviderRegisterPage() {
   const navigate = useNavigate()
 
   const handleSubmit = async (formData) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    console.log("Service provider registration form submitted:", formData)
-    // Add your registration logic here
-    // If registration is successful, navigate to the login page
-    // navigate('/login')
+    try {
+      const response = await registerServiceProvider(formData)
+      toast.success("Registration successful! Please login to continue.")
+      navigate('/login')
+    } catch (error) {
+      toast.error(error.message || "Registration failed. Please try again.")
+    }
   }
 
   return (
@@ -39,7 +42,7 @@ export function ProviderRegisterPage() {
               transition={{ delay: 0.3 }}
               className="text-3xl font-bold text-gray-900 mb-2"
             >
-              Create Service Provider Account
+              Register as Service Provider
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
@@ -47,7 +50,7 @@ export function ProviderRegisterPage() {
               transition={{ delay: 0.4 }}
               className="text-gray-600"
             >
-              Join Hamro Sewa as a service provider
+              Join Hamro Sewa and start providing your services
             </motion.p>
           </div>
 
@@ -83,8 +86,8 @@ export function ProviderRegisterPage() {
         >
           <div className="h-full w-full bg-black bg-opacity-50 flex items-center justify-center">
             <div className="text-white text-center p-8">
-              <h2 className="text-4xl font-bold mb-4">Welcome to Hamro Sewa</h2>
-              <p className="text-xl">Your one-stop solution for all home services</p>
+              <h2 className="text-4xl font-bold mb-4">Grow Your Business</h2>
+              <p className="text-xl">Connect with customers and expand your service area</p>
             </div>
           </div>
         </motion.div>
@@ -92,4 +95,3 @@ export function ProviderRegisterPage() {
     </div>
   )
 }
-

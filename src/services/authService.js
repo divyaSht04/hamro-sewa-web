@@ -45,10 +45,13 @@ export const authService = {
                     throw new Error('No roles found in response');
                 }
 
-                // Create a user object with the role
+                // Create a user object with the role and ID
                 const userData = {
+                    id: user.id, // Include the user ID
                     email: user.email,
-                    role: userRoles[0] // Use the first role
+                    role: userRoles[0], // Use the first role
+                    username: user.username,
+                    fullName: user.fullName
                 };
                 
                 localStorage.setItem('token', token);
@@ -99,11 +102,10 @@ export const authService = {
             delete axios.defaults.headers.common['Authorization'];
         } catch (error) {
             console.error('Logout error:', error);
-            // Still clear local data even if server request fails
+            // Even if logout fails on server, clear local storage
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             delete axios.defaults.headers.common['Authorization'];
-            throw error;
         }
     },
 
@@ -112,20 +114,22 @@ export const authService = {
     },
 
     getUser: () => {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr) : null;
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
     },
 
     isAuthenticated: () => {
         const token = localStorage.getItem('token');
-        if (!token) return false;
+        const user = localStorage.getItem('user');
+        
+        if (!token || !user) {
+            return false;
+        }
 
         try {
-            // Get the user from storage instead of parsing token
-            const user = authService.getUser();
-            return !!user;
-        } catch (e) {
-            console.error('Error checking authentication:', e);
+            const userData = JSON.parse(user);
+            return !!userData && !!userData.email && !!userData.role;
+        } catch {
             return false;
         }
     }

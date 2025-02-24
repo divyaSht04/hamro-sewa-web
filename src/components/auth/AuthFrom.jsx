@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera, Home } from "lucide-react"
+import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera, Home, DollarSign, FileText, Building, UserCircle } from "lucide-react"
 import LoadingSpinner from "../ui/LoadingSpinner.jsx"
 
 export function AuthForm({ type, userType, initialData, onSubmit }) {
@@ -12,13 +12,16 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
           email: "",
           password: "",
           username: "",
+          fullName: "",
           dateOfBirth: "",
           phoneNumber: "",
           address: "",
           photo: null,
           ...(userType === "provider" && {
+            businessName: "",
             serviceCategory: "",
-            experience: "",
+            description: "",
+            hourlyRate: "",
           }),
         },
   )
@@ -80,6 +83,18 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
             />
           </div>
           <div className="relative">
+            <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="Full Name"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+          <div className="relative">
             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="date"
@@ -118,31 +133,59 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
           {userType === "provider" && (
             <>
               <div className="relative">
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                  placeholder="Business Name"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+              <div className="relative">
                 <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <select
                   name="serviceCategory"
                   value={formData.serviceCategory}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
                   required
                 >
                   <option value="">Select Service Category</option>
-                  <option value="cleaning">Cleaning</option>
-                  <option value="plumbing">Plumbing</option>
-                  <option value="electrical">Electrical</option>
-                  <option value="gardening">Gardening</option>
-                  <option value="painting">Painting</option>
+                  <option value="CLEANING">Cleaning</option>
+                  <option value="PLUMBING">Plumbing</option>
+                  <option value="ELECTRICAL">Electrical</option>
+                  <option value="CARPENTRY">Carpentry</option>
+                  <option value="PAINTING">Painting</option>
+                  <option value="GARDENING">Gardening</option>
+                  <option value="APPLIANCE_REPAIR">Appliance Repair</option>
                 </select>
               </div>
               <div className="relative">
+                <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Service Description"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                  required
+                />
+              </div>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="number"
-                  name="experience"
-                  value={formData.experience}
+                  name="hourlyRate"
+                  value={formData.hourlyRate}
                   onChange={handleChange}
-                  placeholder="Years of Experience"
+                  placeholder="Hourly Rate"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
+                  min="0"
+                  step="0.01"
                 />
               </div>
             </>
