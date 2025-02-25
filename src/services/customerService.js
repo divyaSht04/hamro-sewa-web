@@ -10,7 +10,6 @@ export const getCustomerInfo = async (customerId) => {
       }
     });
 
-    // Transform the response to include full image URL if image exists
     if (response.data && response.data.length > 0) {
       const customerData = response.data[0];
       if (customerData.image) {
@@ -31,7 +30,7 @@ export const updateCustomerProfile = async (customerId, customerData) => {
     // Create FormData for sending both profile data and image
     const formData = new FormData();
 
-    // Add all text fields to FormData
+    
     Object.keys(customerData).forEach(key => {
       if (key === 'image') {
         if (customerData.image instanceof File) {
@@ -41,11 +40,11 @@ export const updateCustomerProfile = async (customerId, customerData) => {
         formData.append(key, customerData[key]);
       }
     });
-
-    // Log FormData contents for debugging
-    for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ' + pair[1]);
+    
+    if (customerData.dateOfBirth) {
+      formData.append('dateOfBirth', customerData.dateOfBirth);
     }
+    console.log("Form Data:", formData);
 
     // Update profile data
     const response = await axios.put(

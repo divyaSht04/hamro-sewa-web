@@ -1,22 +1,37 @@
 import axios from 'axios';
-import { ROLES } from '../constants/roles';
-
 const API_URL = 'http://localhost:8084/auth';
+
+axios.interceptors.request.use(
+    (config) => {
+      // Skip token check for login endpoint
+      if (config.url.includes('/login')) {
+        return config;
+      }
+      const token = authService.getToken();
+      if (token && authService.isTokenExpired(token)) {
+        localStorage.clear();
+        window.location.href = '/login';
+        return Promise.reject(new Error('Session expired. Please login again.'));
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
 // Add axios interceptors for global error handling
 axios.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Don't automatically redirect on 401 during login
-            if (!error.config.url.includes('/login')) {
-                localStorage.clear();
-                window.location.href = '/login';
-            }
+      if (error.response?.status === 401) {
+        // Don't automatically redirect on 401 during login
+        if (!error.config.url.includes('/login')) {
+          localStorage.clear();
+          window.location.href = '/login';
         }
-        return Promise.reject(error);
+      }
+      return Promise.reject(error);
     }
-);
+  );
 
 export const authService = {
     login: async (email, password) => {
@@ -108,6 +123,38 @@ export const authService = {
             delete axios.defaults.headers.common['Authorization'];
         }
     },
+
+    getTokenExpiration: function(token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+        } catch (e) {
+          console.error('Error decoding token:', e);
+          return null;
+        }
+      },
+    
+      isTokenExpired: function(token) {
+        if (!token) return true;
+        const expiration = this.getTokenExpiration(token);
+        return expiration ? Date.now() >= expiration : true;
+      },
+    
+      // Updated isAuthenticated method
+      isAuthenticated: function() {
+        const token = this.getToken();
+        const user = this.getUser();
+        
+        if (!token || !user) return false;
+    
+        try {
+          const isExpired = this.isTokenExpired(token);
+          return !!user.email && !!user.role && !isExpired;
+        } catch {
+          return false;
+        }
+      },
+    
 
     getToken: () => {
         return localStorage.getItem('token');

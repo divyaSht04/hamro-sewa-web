@@ -94,12 +94,6 @@ export function EditProfilePage() {
     try {
       // Create a copy of formData
       const updatedData = { ...formData }
-
-      // Format date if present
-      if (updatedData.dateOfBirth) {
-        updatedData.dateOfBirth = updatedData.dateOfBirth.split('T')[0]
-      }
-
       await updateCustomerProfile(user.id, updatedData)
       toast.success("Profile updated successfully!")
       navigate("/customer/profile")
