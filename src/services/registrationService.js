@@ -10,10 +10,10 @@ export const registerCustomer = async (userData) => {
     formData.append('username', userData.username);
     formData.append('email', userData.email);
     formData.append('password', userData.password);
-    formData.append('dateOfBirth', userData.dateOfBirth);
     formData.append('phoneNumber', userData.phoneNumber);
     formData.append('address', userData.address || '');
-    formData.append('fullName', userData.fullName); // Use actual fullName
+    formData.append('fullName', userData.fullName);
+    formData.append('dateOfBirth', userData.dateOfBirth);
     
     // Add photo if it exists
     if (userData.photo) {
@@ -28,8 +28,8 @@ export const registerCustomer = async (userData) => {
 
     return response.data;
   } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data || 'Registration failed');
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || error.response.data || 'Registration failed');
     }
     throw new Error('Network error occurred');
   }
@@ -45,10 +45,7 @@ export const registerServiceProvider = async (userData) => {
     formData.append('password', userData.password);
     formData.append('phoneNumber', userData.phoneNumber);
     formData.append('address', userData.address || '');
-    formData.append('businessName', userData.businessName || userData.fullName); // Use fullName as fallback
-    formData.append('serviceCategory', userData.serviceCategory);
-    formData.append('description', userData.description || '');
-    formData.append('hourlyRate', userData.hourlyRate || 0);
+    formData.append('businessName', userData.businessName);
     
     // Add photo if it exists
     if (userData.photo) {
@@ -63,8 +60,8 @@ export const registerServiceProvider = async (userData) => {
 
     return response.data;
   } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data || 'Registration failed');
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || error.response.data || 'Registration failed');
     }
     throw new Error('Network error occurred');
   }

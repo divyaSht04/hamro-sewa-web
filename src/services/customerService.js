@@ -10,14 +10,6 @@ export const getCustomerInfo = async (customerId) => {
       }
     });
 
-    if (response.data && response.data.length > 0) {
-      const customerData = response.data[0];
-      if (customerData.image) {
-        customerData.image = `${API_BASE_URL}/uploads/${customerData.image}`;
-        console.log("Image URL:", customerData.image);
-      }
-    }
-
     return response.data;
   } catch (error) {
     console.error("Error in getCustomerInfo:", error);
@@ -29,7 +21,6 @@ export const updateCustomerProfile = async (customerId, customerData) => {
   try {
     // Create FormData for sending both profile data and image
     const formData = new FormData();
-
     
     Object.keys(customerData).forEach(key => {
       if (key === 'image') {
@@ -40,11 +31,6 @@ export const updateCustomerProfile = async (customerId, customerData) => {
         formData.append(key, customerData[key]);
       }
     });
-    
-    if (customerData.dateOfBirth) {
-      formData.append('dateOfBirth', customerData.dateOfBirth);
-    }
-    console.log("Form Data:", formData);
 
     // Update profile data
     const response = await axios.put(

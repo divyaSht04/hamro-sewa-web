@@ -55,7 +55,7 @@ export function EditProfilePage() {
 
         if (customerInfo.image) {
           if (!customerInfo.image.startsWith("http")) {
-            setImagePreview(`${API_BASE_URL}/uploads/${customerInfo.image}`)
+            setImagePreview(`${API_BASE_URL}/uploads/images/${customerInfo.image}`)
           } else {
             setImagePreview(customerInfo.image)
           }

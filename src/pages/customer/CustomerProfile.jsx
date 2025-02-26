@@ -34,8 +34,11 @@ export function CustomerProfile() {
         }
 
         const profileInfo = data[0]
-        if (profileInfo.image && !profileInfo.image.startsWith("http")) {
-          profileInfo.image = `${API_BASE_URL}/uploads/${profileInfo.image}`
+        if (profileInfo.image) {
+          // Don't modify if it's already a full URL
+          if (!profileInfo.image.startsWith('http') && !profileInfo.image.startsWith(API_BASE_URL)) {
+            profileInfo.image = `${API_BASE_URL}/uploads/images/${profileInfo.image}`
+          }
         }
 
         setProfileData(profileInfo)
@@ -81,8 +84,8 @@ export function CustomerProfile() {
             <div className="relative">
               {profileData?.image && !imageError ? (
                 <img
-                  src={profileData.image || "/placeholder.svg"}
-                  alt={profileData?.fullName}
+                  src={profileData.image}
+                  alt={profileData?.fullName || "Profile"}
                   onError={handleImageError}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
                 />
@@ -114,12 +117,12 @@ export function CustomerProfile() {
             <InfoItem
               icon={FiCalendar}
               color="text-purple-500"
-              label="Joined"
-              value={new Date(profileData?.createdAt).toLocaleDateString("en-US", {
+              label="Date of Birth"
+              value={profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
-              })}
+              }) : "Not specified"}
             />
           </div>
 
@@ -150,4 +153,3 @@ function InfoItem({ icon: Icon, color, label, value }) {
     </div>
   )
 }
-

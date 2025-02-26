@@ -89,7 +89,7 @@ function AppContent() {
     "/admin/profile",
     "/admin/services",
     "/provider",
-    "/provider/dashboard",
+    "/provider/profile",
     "/provider/services",
     "/access-denied"
   ].includes(location.pathname)
