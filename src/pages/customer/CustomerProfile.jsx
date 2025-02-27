@@ -35,7 +35,6 @@ export function CustomerProfile() {
 
         const profileInfo = data[0]
         if (profileInfo.image) {
-          // Don't modify if it's already a full URL
           if (!profileInfo.image.startsWith('http') && !profileInfo.image.startsWith(API_BASE_URL)) {
             profileInfo.image = `${API_BASE_URL}/uploads/images/${profileInfo.image}`
           }
