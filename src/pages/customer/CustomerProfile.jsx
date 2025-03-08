@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
@@ -10,7 +8,7 @@ import toast from "react-hot-toast"
 
 const API_BASE_URL = "http://localhost:8084"
 
-export function CustomerProfile() {
+export function CustomerProfile() {  
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [imageError, setImageError] = useState(false)
@@ -34,6 +32,7 @@ export function CustomerProfile() {
         }
 
         const profileInfo = data[0]
+        console.log(profileInfo.image)
         if (profileInfo.image) {
           if (!profileInfo.image.startsWith('http') && !profileInfo.image.startsWith(API_BASE_URL)) {
             profileInfo.image = `${API_BASE_URL}/uploads/images/${profileInfo.image}`

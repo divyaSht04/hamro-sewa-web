@@ -209,13 +209,13 @@ export function ServiceProviderProfile() {
       <EditableField
         field="email"
         value={editableData.email}
-        isEditing={false} // Always false to disable editing
-        onEdit={() => {}} // Empty function
-        onSave={() => {}} // Empty function
-        onCancel={() => {}} // Empty function
-        onChange={() => {}} // Empty function
+        isEditing={false} 
+        onEdit={() => {}} 
+        onSave={() => {}} 
+        onCancel={() => {}} 
+        onChange={() => {}}
         icon={FiMail}
-        className="opacity-70" // Add visual indication that it's disabled
+        className="opacity-70" 
       />
       <EditableField
         field="phoneNumber"
