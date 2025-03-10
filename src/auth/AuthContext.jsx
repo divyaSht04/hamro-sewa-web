@@ -17,7 +17,15 @@ export const AuthProvider = ({ children }) => {
   const handleError = (error) => {
     let message = error.message || 'An unexpected error occurred';
     
-    if (error.response) {
+    // Check if the error is a network error (server down or no internet)
+    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      message = 'Server is currently unavailable. Please try again later.';
+      toast.error(message);
+      setError(message);
+      return;
+    }
+    
+    if (error.response && error.response.status) {
         switch (error.response.status) {
             case 400:
                 message = error.response.data || 'Invalid request';
@@ -46,7 +54,7 @@ export const AuthProvider = ({ children }) => {
                 message = error.response.data || message;
         }
     } else if (error.request) {
-        message = 'Network error. Please check your connection';
+        message = 'Server is currently unavailable. Please try again later.';
     }
     
     toast.error(message);
@@ -62,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(email, password);
       toast.dismiss(loadingToast);
       
-      if (response.user) {
+      if (response && response.user) {
         setUser(response.user);
         setUserRole(response.user.role);
         

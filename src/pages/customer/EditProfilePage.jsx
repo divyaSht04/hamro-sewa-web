@@ -20,6 +20,7 @@ export function EditProfilePage() {
     address: "",
     email: "",
     image: null,
+    existingImage: null
   })
   const [imagePreview, setImagePreview] = useState(null)
   const { user } = useAuth()
@@ -51,6 +52,7 @@ export function EditProfilePage() {
           address: customerInfo.address || "",
           email: customerInfo.email || "",
           image: null,
+          existingImage: customerInfo.image || null
         })
 
         if (customerInfo.image) {
@@ -94,6 +96,10 @@ export function EditProfilePage() {
 
     try {
       const updatedData = { ...formData }
+      // If no new image is selected, include the existing image path
+      if (!updatedData.image && updatedData.existingImage) {
+        updatedData.image = updatedData.existingImage;
+      }
       await updateCustomerProfile(user.id, updatedData)
       toast.success("Profile updated successfully!")
       navigate("/customer/profile")
@@ -247,4 +253,3 @@ function InputField({ icon: Icon, name, value, onChange, placeholder, type = "te
     </div>
   )
 }
-

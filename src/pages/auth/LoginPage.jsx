@@ -5,6 +5,7 @@ import { UserPlus } from "lucide-react"
 import { AuthForm } from '../../components/auth/AuthFrom'
 import { useAuth } from '../../auth/AuthContext'
 import { toast } from "react-hot-toast"
+import { ErrorDisplay } from '../../components/auth/ErrorDisplay'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -21,15 +22,29 @@ export function LoginPage() {
         throw new Error("Email and password are required")
       }
 
-      const { success, error } = await login(formData.email, formData.password)
-      
-      if (!success && error) {
-        throw new Error(error)
+      try {
+        const result = await login(formData.email, formData.password)
+        
+        if (!result || !result.success) {
+          throw new Error(result?.error || "Login failed")
+        }
+      } catch (loginError) {
+        // Handle login errors
+        console.error("Login process error:", loginError)
+        
+        // Check for network errors
+        if (loginError.message.includes("Network Error") || 
+            loginError.code === "ERR_NETWORK" ||
+            loginError.message.includes("Server is currently unavailable")) {
+          throw new Error("Server is currently unavailable. Please try again later.")
+        }
+        
+        throw loginError
       }
     } catch (error) {
       console.error("Login error:", error)
-      setError(error.message)
-      toast.error(error.message || 'Login failed')
+      // Display the error message directly from the error object
+      setError(error.message || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -64,16 +79,10 @@ export function LoginPage() {
           </div>
 
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md"
-            >
-              {error}
-            </motion.div>
+            <ErrorDisplay message={error} />
           )}
 
-          <AuthForm type="login" onSubmit={handleSubmit} isLoading={isLoading} />
+          <AuthForm type="login" onSubmit={handleSubmit} isLoading={isLoading} error={error} />
 
           <motion.div
             initial={{ opacity: 0 }}

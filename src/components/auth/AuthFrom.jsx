@@ -3,7 +3,7 @@ import { motion } from "framer-motion"
 import { User, Lock, Mail, Eye, EyeOff, Calendar, Phone, Briefcase, Camera, Home, Building, UserCircle } from "lucide-react"
 import LoadingSpinner from "../ui/LoadingSpinner.jsx"
 
-export function AuthForm({ type, userType, initialData, onSubmit }) {
+export function AuthForm({ type, userType, initialData, onSubmit, isLoading, error }) {
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState(
     type === "edit" && initialData
@@ -26,7 +26,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
   )
   const [photoPreview, setPhotoPreview] = useState(type === "edit" ? initialData?.photo : null)
   const fileInputRef = useRef(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
 
   useEffect(() => {
     if (type === "edit" && initialData) {
@@ -57,7 +57,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setIsLoading(true)
+    setLocalLoading(true)
     try {
       if (onSubmit) {
         await onSubmit(formData)
@@ -65,7 +65,7 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
     } catch (error) {
       console.error("Form submission error:", error)
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
@@ -221,14 +221,19 @@ export function AuthForm({ type, userType, initialData, onSubmit }) {
           )}
         </div>
       )}
+      {error && (
+        <div className="text-red-500 text-center mb-4">
+          {error}
+        </div>
+      )}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         type="submit"
         className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark transition-colors duration-300 flex items-center justify-center"
-        disabled={isLoading}
+        disabled={isLoading || localLoading}
       >
-        {isLoading ? (
+        {(isLoading || localLoading) ? (
           <>
             <LoadingSpinner size="w-5 h-5 mr-2" />
             {type === "login" ? "Signing In..." : type === "register" ? "Creating Account..." : "Updating Profile..."}

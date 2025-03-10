@@ -1,15 +1,20 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useAuth } from "../../auth/AuthContext"
 import { User, Mail, Phone, Camera, Calendar, MapPin, Building, LogOut, Shield, Info, AlertCircle } from "lucide-react"
 import AdminLayout from "../../components/admin/AdminLayout"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
+import { getAdminInfo, updateAdminProfile } from "../../services/adminService"
+
+const API_BASE_URL = "http://localhost:8084"
 
 const AdminProfile = () => {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -22,19 +27,64 @@ const AdminProfile = () => {
   }
 
   const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 234 567 890",
-    dateOfBirth: "1990-01-01",
-    address: "123 Admin Street, City",
-    department: "Service Management",
-    image:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    department: "",
+    image: null,
+    existingImage: null
   })
 
-  const [previewImage, setPreviewImage] = useState(profile.image)
+  const [previewImage, setPreviewImage] = useState(null)
   const fileInputRef = useRef(null)
   const [isSuccess, setIsSuccess] = useState(false)
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        if (!user?.id) {
+          toast.error("User ID not found")
+          setLoading(false)
+          return
+        }
+
+        const data = await getAdminInfo(user.id)
+        if (!data) {
+          toast.error("No admin data found")
+          setLoading(false)
+          return
+        }
+
+        setProfile({
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split("T")[0] : "",
+          address: data.address || "",
+          department: data.department || "",
+          image: null,
+          existingImage: data.image || null
+        })
+
+        if (data.image) {
+          if (!data.image.startsWith("http")) {
+            setPreviewImage(`${API_BASE_URL}/uploads/images/${data.image}`)
+          } else {
+            setPreviewImage(data.image)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching admin data:", error)
+        toast.error(error.message || "Failed to fetch profile data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAdminData()
+  }, [user])
 
   const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value })
@@ -43,21 +93,60 @@ const AdminProfile = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImage(reader.result)
-        setProfile({ ...profile, image: reader.result })
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size should be less than 5MB")
+        return
       }
-      reader.readAsDataURL(file)
+      setProfile({ ...profile, image: file })
+      setPreviewImage(URL.createObjectURL(file))
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Handle profile update logic here
-    console.log("Profile updated:", profile)
-    setIsSuccess(true)
-    setTimeout(() => setIsSuccess(false), 3000)
+    setIsUpdating(true)
+    
+    try {
+      const updatedData = { ...profile }
+      // If no new image is selected, don't include the image field at all
+      // This will prevent the backend from processing any image updates
+      if (!updatedData.image && updatedData.existingImage) {
+        // Don't set updatedData.image to existingImage, just leave it out
+        // The backend will keep the existing image
+        delete updatedData.image;
+      }
+      
+      await updateAdminProfile(user.id, updatedData)
+      toast.success("Profile updated successfully")
+      setIsSuccess(true)
+      setTimeout(() => setIsSuccess(false), 3000)
+      
+      // Refresh admin data to ensure we have the latest info including image
+      const refreshedData = await getAdminInfo(user.id);
+      if (refreshedData) {
+        // Update the image preview if needed
+        if (refreshedData.image && !refreshedData.image.startsWith("http")) {
+          setPreviewImage(`${API_BASE_URL}/uploads/images/${refreshedData.image}`);
+        } else if (refreshedData.image) {
+          setPreviewImage(refreshedData.image);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      toast.error(error.message || "Failed to update profile")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -92,6 +181,10 @@ const AdminProfile = () => {
                       src={previewImage || "/placeholder.svg"}
                       alt="Profile"
                       className="w-40 h-40 rounded-full object-cover border-4 border-white shadow-lg"
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.src = "/placeholder.svg"
+                      }}
                     />
                     <button
                       type="button"
@@ -204,13 +297,14 @@ const AdminProfile = () => {
                         name="dateOfBirth"
                         value={profile.dateOfBirth}
                         onChange={handleChange}
+                        max={new Date().toISOString().split("T")[0]}
                         className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 py-3 transition-all duration-200 bg-white hover:bg-gray-50"
                       />
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div>
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -226,7 +320,8 @@ const AdminProfile = () => {
                     </div>
                   </div>
 
-                  <div>
+                  {/* Department */}
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -243,36 +338,34 @@ const AdminProfile = () => {
                   </div>
                 </div>
 
-                {/* Success Message */}
-                {isSuccess && (
-                  <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-center animate-fadeIn">
-                    <div className="bg-emerald-100 p-2 rounded-full mr-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-emerald-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-medium">Profile updated successfully!</p>
-                      <p className="text-sm text-emerald-600">Your changes have been saved.</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-8">
+                <div className="mt-8 flex justify-end">
                   <button
                     type="submit"
-                    className="w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+                    disabled={isUpdating}
+                    className={`px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 ${
+                      isSuccess
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    } ${isUpdating ? "opacity-70 cursor-not-allowed" : ""}`}
                   >
-                    Update Profile
+                    {isUpdating ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Updating...
+                      </span>
+                    ) : isSuccess ? (
+                      <span className="flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Updated!
+                      </span>
+                    ) : (
+                      "Update Profile"
+                    )}
                   </button>
                 </div>
               </div>
