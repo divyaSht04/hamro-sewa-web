@@ -6,7 +6,7 @@ import { LayoutDashboard, ListTodo, UserCircle2, LogOut } from "lucide-react"
 import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()

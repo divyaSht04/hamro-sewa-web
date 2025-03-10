@@ -5,12 +5,15 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Upload, X, File, ImageIcon, Info, ChevronLeft, AlertTriangle, Save, Loader2 } from "lucide-react"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import toast from "react-hot-toast"
+import { createProviderService, updateProviderService, getServiceById, getServiceImageUrl } from "../../services/providerServiceApi"
+import { useAuth } from "../../auth/AuthContext"
 
 export function AddEditService() {
   const { id } = useParams()
   const isEditMode = !!id
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { user } = useAuth()
 
   const [formData, setFormData] = useState({
     serviceName: "",
@@ -19,6 +22,7 @@ export function AddEditService() {
     category: "",
     pdf: null,
     image: null,
+    serviceProviderId: user?.id
   })
 
   const [errors, setErrors] = useState({})
@@ -52,33 +56,24 @@ export function AddEditService() {
     if (isEditMode) {
       const fetchServiceData = async () => {
         try {
-          // In a real application, this would be an API call
-          // const response = await api.get(`/services/${id}`)
-          // const serviceData = response.data
-
-          // Mock data for demonstration
-          const serviceData = {
-            serviceName: "Home Cleaning",
-            description:
-              "Professional home cleaning services for a sparkling clean living space. We use eco-friendly cleaning products and follow a detailed checklist to ensure your home is spotless.",
-            price: "50",
-            category: "Cleaning",
-            pdfPath: "home_cleaning_details.pdf",
-            imagePath:
-              "https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-          }
-
+          const serviceData = await getServiceById(id)
+          
           setFormData({
             serviceName: serviceData.serviceName,
             description: serviceData.description,
-            price: serviceData.price,
+            price: serviceData.price.toString(),
             category: serviceData.category,
             pdf: null, // Existing files will be kept if no new file is uploaded
             image: null,
+            serviceProviderId: serviceData.serviceProvider.id
           })
 
           setPdfPreview(serviceData.pdfPath)
-          setImagePreview(serviceData.imagePath)
+          
+          // Set image preview if available
+          if (serviceData.imagePath) {
+            setImagePreview(getServiceImageUrl(serviceData.id))
+          }
         } catch (error) {
           console.error("Failed to fetch service data:", error)
           toast.error("Failed to load service data")
@@ -220,45 +215,17 @@ export function AddEditService() {
     setIsSubmitting(true)
 
     try {
-      // Create form data for multipart/form-data submission
-      const submitData = new FormData()
-      submitData.append("serviceName", formData.serviceName)
-      submitData.append("description", formData.description)
-      submitData.append("price", formData.price)
-      submitData.append("category", formData.category)
-
-      if (formData.pdf) {
-        submitData.append("pdf", formData.pdf)
-      }
-
-      if (formData.image) {
-        submitData.append("image", formData.image)
+      // Ensure serviceProviderId is set
+      if (!formData.serviceProviderId && user?.id) {
+        formData.serviceProviderId = user.id
       }
 
       let response
       if (isEditMode) {
-        // In a real application, this would be an API call
-        // response = await api.put(`/services/${id}`, submitData, {
-        //   headers: {
-        //     'Content-Type': 'multipart/form-data',
-        //   },
-        // })
-
-        // Mock response
-        response = { status: 200 }
-
+        response = await updateProviderService(id, formData)
         toast.success("Service updated successfully")
       } else {
-        // In a real application, this would be an API call
-        // response = await api.post("/services", submitData, {
-        //   headers: {
-        //     'Content-Type': 'multipart/form-data',
-        //   },
-        // })
-
-        // Mock response
-        response = { status: 201 }
-
+        response = await createProviderService(formData)
         toast.success("Service submitted for approval")
       }
 

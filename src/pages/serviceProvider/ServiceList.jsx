@@ -3,69 +3,13 @@ import { motion } from "framer-motion"
 import { Eye, X, ChevronLeft, ChevronRight, Search, FileText, Edit, Trash2, PlusCircle, Filter, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { Link } from "react-router-dom"
-import api from "../../api/api"
 import toast from "react-hot-toast"
+import { getProviderServices, deleteService, getServiceImageUrl, getServicePdfUrl } from "../../services/providerServiceApi"
+import { useAuth } from "../../auth/AuthContext"
+import axios from 'axios'
 
 export function ServiceProviderServiceList() {
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      name: "Home Cleaning",
-      category: "Cleaning",
-      price: 50,
-      status: "Approved",
-      description: "Professional home cleaning services for a sparkling clean living space. We use eco-friendly cleaning products and follow a detailed checklist to ensure your home is spotless.",
-      providerImage: "https://randomuser.me/api/portraits/women/1.jpg",
-      providerName: "Alice Johnson",
-      attachedFile: "home_cleaning_details.pdf",
-      image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      createdAt: "2023-04-15",
-      bookings: 12
-    },
-    {
-      id: 2,
-      name: "Plumbing Service",
-      category: "Maintenance",
-      price: 75,
-      status: "Pending",
-      description: "Expert plumbing solutions for all your household needs. From fixing leaks to installing new plumbing systems, our qualified plumbers provide reliable service.",
-      providerImage: "https://randomuser.me/api/portraits/men/2.jpg",
-      providerName: "Bob Smith",
-      attachedFile: "plumbing_services.pdf",
-      image: "https://images.unsplash.com/photo-1603796846097-bee99e4a601f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      createdAt: "2023-05-22",
-      bookings: 8
-    },
-    {
-      id: 3,
-      name: "Electrical Repairs",
-      category: "Maintenance",
-      price: 80,
-      status: "Rejected",
-      description: "Comprehensive electrical services by certified electricians. We handle everything from wiring issues to electrical upgrades with safety as our top priority.",
-      providerImage: "https://randomuser.me/api/portraits/women/3.jpg",
-      providerName: "Carol Davis",
-      attachedFile: "electrical_work_info.pdf",
-      image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      createdAt: "2023-06-10",
-      bookings: 0,
-      rejectionReason: "Documentation incomplete. Please provide certification documents."
-    },
-    {
-      id: 4,
-      name: "Garden Landscaping",
-      category: "Outdoor",
-      price: 120,
-      status: "Approved",
-      description: "Transform your outdoor space with our professional landscaping services. We design and implement beautiful garden solutions tailored to your preferences.",
-      providerImage: "https://randomuser.me/api/portraits/men/4.jpg",
-      providerName: "David Wilson",
-      attachedFile: "landscaping_services.pdf",
-      image: "https://images.unsplash.com/photo-1599629954294-14df9ec8dfe8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      createdAt: "2023-06-15",
-      bookings: 5
-    },
-  ])
+  const [services, setServices] = useState([])
   
   const [selectedService, setSelectedService] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -76,17 +20,38 @@ export function ServiceProviderServiceList() {
   const [isLoading, setIsLoading] = useState(false)
   const [viewingDocument, setViewingDocument] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const { user } = useAuth()
+  
+  // PDF viewer state
+  const [pdfLoading, setPdfLoading] = useState(true)
+  const [pdfError, setPdfError] = useState(false)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null)
 
-  const categories = ["All", "Cleaning", "Maintenance", "Outdoor", "Home Improvement", "Professional"]
+  const categories = ["All", "Cleaning", "Maintenance", "Electrical", "Plumbing", "Carpentry", "Painting", "Gardening", "Home Improvement", "Professional Services", "Education", "Health & Wellness", "Beauty", "Other"]
   const statuses = ["All", "Approved", "Pending", "Rejected"]
 
   useEffect(() => {
     const fetchServices = async () => {
+      if (!user?.id) return;
+      
       setIsLoading(true)
       try {
-        // In a real application, this would be an API call
-        // const response = await api.get("/services/provider")
-        // setServices(response.data)
+        const data = await getProviderServices(user.id);
+        // Transform the data to match our component's expected format
+        const formattedServices = data.map(service => ({
+          id: service.id,
+          name: service.serviceName,
+          category: service.category,
+          price: service.price,
+          status: service.status || "Pending", // Default to pending if status is not provided
+          description: service.description,
+          attachedFile: service.pdfPath,
+          image: service.imagePath ? getServiceImageUrl(service.id) : null,
+          createdAt: new Date(service.createdAt).toISOString().split('T')[0],
+          bookings: service.bookings || 0
+        }));
+        
+        setServices(formattedServices);
       } catch (error) {
         console.error("Failed to fetch services:", error)
         toast.error("Failed to load services")
@@ -96,7 +61,7 @@ export function ServiceProviderServiceList() {
     }
 
     fetchServices()
-  }, [])
+  }, [user?.id])
 
   const filteredServices = services.filter(
     (service) => {
@@ -123,22 +88,72 @@ export function ServiceProviderServiceList() {
     setSelectedService(null)
   }
 
-  const openDocumentViewer = (fileName) => {
-    setViewingDocument(fileName)
+  const openDocumentViewer = async (serviceId) => {
+    if (!serviceId) {
+      toast.error("No PDF document available");
+      return;
+    }
+    
+    // Reset PDF viewer state
+    setPdfLoading(true);
+    setPdfError(false);
+    setPdfBlobUrl(null);
+    
+    try {
+      // Set the viewing document to show the PDF viewer modal
+      setViewingDocument(serviceId);
+      
+      // Get the PDF data as a blob
+      const response = await axios.get(getServicePdfUrl(serviceId), {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        }
+      });
+      
+      // Create a blob URL from the PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      setPdfBlobUrl(url);
+      setPdfLoading(false);
+    } catch (error) {
+      console.error("Error loading PDF:", error);
+      setPdfLoading(false);
+      setPdfError(true);
+    }
   }
 
   const closeDocumentViewer = () => {
-    setViewingDocument(null)
+    // Revoke the blob URL to free up memory
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+    }
+    
+    setViewingDocument(null);
+    setPdfBlobUrl(null);
   }
+
+  const downloadPdf = (serviceId, serviceName) => {
+    if (!serviceId) {
+      toast.error("No PDF document available");
+      return;
+    }
+    
+    const pdfUrl = getServicePdfUrl(serviceId);
+    
+    // Open in a new tab for download
+    window.open(pdfUrl, '_blank');
+  }
+
 
   const confirmDelete = (id) => {
     setShowDeleteConfirm(id)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     try {
-      // In a real application, this would be an API call
-      // await api.delete(`/services/${id}`)
+      await deleteService(id);
       setServices(services.filter(service => service.id !== id))
       setShowDeleteConfirm(null)
       toast.success("Service deleted successfully")
@@ -321,6 +336,15 @@ export function ServiceProviderServiceList() {
                             <Trash2 size={16} className="mr-1.5" />
                             Delete
                           </button>
+                          {service.attachedFile && (
+                            <button
+                              onClick={() => openDocumentViewer(service.id)}
+                              className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                              <FileText size={16} className="mr-1.5" />
+                              PDF
+                            </button>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -423,20 +447,19 @@ export function ServiceProviderServiceList() {
                       <p className="text-sm text-gray-500 mb-2">Service Document</p>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => openDocumentViewer(selectedService.attachedFile)}
+                          onClick={() => openDocumentViewer(selectedService.id)}
                           className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100 transition-colors border border-indigo-200"
                         >
                           <FileText size={16} className="mr-1.5" />
                           View PDF
                         </button>
-                        <a
-                          href={`/files/${selectedService.attachedFile}`}
-                          download
+                        <button
+                          onClick={() => downloadPdf(selectedService.id, selectedService.name)}
                           className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                         >
                           <Download size={16} className="mr-1.5" />
                           Download
-                        </a>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -483,7 +506,44 @@ export function ServiceProviderServiceList() {
         </div>
       )}
 
-      {/* Document Viewer Modal */}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-lg max-w-md w-full p-6"
+          >
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+            </div>
+            
+            <h3 className="text-xl font-bold text-center text-gray-800 mb-2">Confirm Deletion</h3>
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to delete this service? This action cannot be undone.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(showDeleteConfirm)}
+                className="flex-1 px-4 py-2 bg-red-600 rounded-lg text-white font-medium hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      
+      {/* PDF Viewer Modal */}
       {viewingDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div 
@@ -494,26 +554,21 @@ export function ServiceProviderServiceList() {
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
               <h3 className="text-xl font-bold text-gray-800 flex items-center">
                 <FileText size={20} className="inline mr-2 text-green-600" />
-                {viewingDocument}
+                Document Viewer
               </h3>
               <div className="flex items-center space-x-2">
-                <a
-                  href={`/files/${viewingDocument}`}
-                  download
+                <button
+                  onClick={() => {
+                    const service = services.find(s => s.id === viewingDocument);
+                    if (service) {
+                      downloadPdf(viewingDocument, service.name);
+                    }
+                  }}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   title="Download document"
                 >
                   <Download size={20} className="text-gray-600" />
-                </a>
-                <a
-                  href={`/files/${viewingDocument}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  title="Open in new tab"
-                >
-                  <ExternalLink size={20} className="text-gray-600" />
-                </a>
+                </button>
                 <button
                   onClick={closeDocumentViewer}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -525,67 +580,46 @@ export function ServiceProviderServiceList() {
             </div>
 
             <div className="flex-1 bg-gray-100 p-4 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex items-center justify-center overflow-auto">
-                {/* Document preview - in a real app, you would use a PDF viewer or document preview component */}
-                <div className="text-center p-8">
-                  <div className="w-24 h-32 mx-auto bg-gradient-to-b from-green-50 to-emerald-50 rounded-lg border border-gray-200 flex items-center justify-center mb-4 relative shadow-md">
-                    <FileText size={36} className="text-green-600" />
-                    <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shadow-sm">
-                      <span className="text-xs font-bold text-green-700">PDF</span>
+              <div className="w-full h-full flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {pdfLoading && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+                  </div>
+                )}
+                
+                {pdfError && (
+                  <div className="text-center p-6 max-w-md mx-auto">
+                    <div className="w-20 h-24 mx-auto bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center mb-4 relative">
+                      <FileText size={32} className="text-gray-500" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Unable to Load PDF</h4>
+                    <p className="text-gray-600 mb-6">
+                      There was an error loading the PDF. Please try downloading it instead.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <button
+                        onClick={() => {
+                          const service = services.find(s => s.id === viewingDocument);
+                          if (service) {
+                            downloadPdf(viewingDocument, service.name);
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                      >
+                        <Download size={16} className="mr-2" />
+                        Download PDF
+                      </button>
                     </div>
                   </div>
-                  <p className="text-gray-700 font-medium mb-4">Preview not available in this demo</p>
-                  <p className="text-sm text-gray-500">
-                    In a real application, a PDF or document viewer would be integrated here
-                  </p>
-                  <div className="mt-8">
-                    <a
-                      href={`/files/${viewingDocument}`}
-                      download
-                      className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors font-medium shadow-sm"
-                    >
-                      <Download size={18} className="mr-2" />
-                      Download Document
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 mx-4"
-          >
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 mb-4">
-                <AlertTriangle className="h-6 w-6 text-rose-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Service</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to delete this service? This action cannot be undone.
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  type="button"
-                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none"
-                  onClick={() => setShowDeleteConfirm(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-rose-600 border border-transparent rounded-md hover:bg-rose-700 focus:outline-none"
-                  onClick={() => handleDelete(showDeleteConfirm)}
-                >
-                  Delete
-                </button>
+                )}
+                
+                {!pdfLoading && !pdfError && pdfBlobUrl && (
+                  <iframe 
+                    src={pdfBlobUrl}
+                    className="w-full h-full"
+                    title="PDF Viewer"
+                  />
+                )}
               </div>
             </div>
           </motion.div>
