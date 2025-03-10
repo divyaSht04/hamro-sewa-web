@@ -28,7 +28,7 @@ export function ServiceProviderServiceList() {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null)
 
   const categories = ["All", "Cleaning", "Maintenance", "Electrical", "Plumbing", "Carpentry", "Painting", "Gardening", "Home Improvement", "Professional Services", "Education", "Health & Wellness", "Beauty", "Other"]
-  const statuses = ["All", "Approved", "Pending", "Rejected"]
+  const statuses = ["All", "APPROVED", "PENDING", "REJECTED"]
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -43,12 +43,13 @@ export function ServiceProviderServiceList() {
           name: service.serviceName,
           category: service.category,
           price: service.price,
-          status: service.status || "Pending", // Default to pending if status is not provided
+          status: service.status || "PENDING", // Default to pending if status is not provided
           description: service.description,
           attachedFile: service.pdfPath,
           image: service.imagePath ? getServiceImageUrl(service.id) : null,
           createdAt: new Date(service.createdAt).toISOString().split('T')[0],
-          bookings: service.bookings || 0
+          bookings: service.bookings || 0,
+          adminFeedback: service.adminFeedback,
         }));
         
         setServices(formattedServices);
@@ -165,9 +166,9 @@ export function ServiceProviderServiceList() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Approved":
+      case "APPROVED":
         return "bg-green-100 text-green-600 border border-green-200"
-      case "Rejected":
+      case "REJECTED":
         return "bg-red-100 text-red-600 border border-red-200"
       default:
         return "bg-amber-100 text-amber-600 border border-amber-200"
@@ -176,9 +177,9 @@ export function ServiceProviderServiceList() {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Approved":
+      case "APPROVED":
         return <CheckCircle size={14} className="mr-1.5" />
-      case "Rejected":
+      case "REJECTED":
         return <XCircle size={14} className="mr-1.5" />
       default:
         return <Clock size={14} className="mr-1.5" />
@@ -473,13 +474,16 @@ export function ServiceProviderServiceList() {
                 </div>
               </div>
 
-              {selectedService.status === "Rejected" && (
+              {selectedService.status === "REJECTED" && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Rejection Reason</h3>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Feedback from Admin</h3>
                   <div className="bg-rose-50 border border-rose-200 p-4 rounded-lg">
                     <div className="flex items-start">
-                      <AlertTriangle className="w-5 h-5 text-rose-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <p className="text-rose-700">{selectedService.rejectionReason}</p>
+                      <XCircle className="text-rose-500 mt-0.5 mr-3 flex-shrink-0" size={18} />
+                      <div>
+                        <p className="text-rose-700 font-medium mb-1">Your service was rejected</p>
+                        <p className="text-gray-700">{selectedService.adminFeedback || "No specific feedback provided."}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -551,9 +555,9 @@ export function ServiceProviderServiceList() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col h-[85vh]"
           >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
               <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                <FileText size={20} className="inline mr-2 text-green-600" />
+                <FileText className="inline mr-2 text-green-600" size={20} />
                 Document Viewer
               </h3>
               <div className="flex items-center space-x-2">

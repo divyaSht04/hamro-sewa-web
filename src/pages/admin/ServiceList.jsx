@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from 'axios'
 import {
   Trash2,
   Eye,
@@ -13,78 +14,62 @@ import {
   Search,
   FileText,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react"
 import AdminLayout from "../../components/admin/AdminLayout"
+import { 
+  getAllServices, 
+  getServicesByStatus, 
+  approveService, 
+  rejectService,
+  getServiceImageUrl,
+  getServicePdfUrl
+} from "../../services/adminServiceApi"
+import toast from "react-hot-toast"
 
 const ServiceList = () => {
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      name: "Home Cleaning",
-      category: "Cleaning",
-      price: "$50",
-      status: "Pending",
-      description: "Professional home cleaning services for a spotless living space.",
-      providerImage: "https://randomuser.me/api/portraits/women/1.jpg",
-      providerName: "Alice Johnson",
-      attachedFile: "home_cleaning_details.pdf",
-    },
-    {
-      id: 2,
-      name: "Plumbing",
-      category: "Maintenance",
-      price: "$75",
-      status: "Approved",
-      description: "Expert plumbing solutions for all your household needs.",
-      providerImage: "https://randomuser.me/api/portraits/men/2.jpg",
-      providerName: "Bob Smith",
-      attachedFile: "plumbing_services.pdf",
-    },
-    {
-      id: 3,
-      name: "Electrical Work",
-      category: "Maintenance",
-      price: "$80",
-      status: "Rejected",
-      description: "Reliable electrical services to keep your home powered and safe.",
-      providerImage: "https://randomuser.me/api/portraits/women/3.jpg",
-      providerName: "Carol Davis",
-      attachedFile: "electrical_work_info.pdf",
-    },
-    {
-      id: 4,
-      name: "Gardening",
-      category: "Outdoor",
-      price: "$60",
-      status: "Pending",
-      description: "Professional gardening services to maintain and beautify your outdoor spaces.",
-      providerImage: "https://randomuser.me/api/portraits/men/4.jpg",
-      providerName: "David Wilson",
-      attachedFile: "gardening_services.pdf",
-    },
-    {
-      id: 5,
-      name: "Painting",
-      category: "Home Improvement",
-      price: "$200",
-      status: "Approved",
-      description: "High-quality painting services for both interior and exterior projects.",
-      providerImage: "https://randomuser.me/api/portraits/women/5.jpg",
-      providerName: "Eva Brown",
-      attachedFile: "painting_details.pdf",
-    },
-  ])
-
+  const [services, setServices] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedService, setSelectedService] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [servicesPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
   const [viewingDocument, setViewingDocument] = useState(null)
+  const [statusFilter, setStatusFilter] = useState("ALL")
+  const [feedbackText, setFeedbackText] = useState("")
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState(false)
+
+  // Fetch services on component mount
+  useEffect(() => {
+    fetchServices()
+  }, [statusFilter])
+
+  const fetchServices = async () => {
+    setIsLoading(true)
+    try {
+      let fetchedServices
+      
+      if (statusFilter === "ALL") {
+        fetchedServices = await getAllServices()
+      } else {
+        fetchedServices = await getServicesByStatus(statusFilter)
+      }
+      
+      setServices(fetchedServices)
+    } catch (error) {
+      console.error("Error fetching services:", error)
+      toast.error("Failed to load services")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filteredServices = services.filter(
     (service) =>
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.serviceProvider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       service.category.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
@@ -94,40 +79,101 @@ const ServiceList = () => {
   const totalPages = Math.ceil(filteredServices.length / servicesPerPage)
 
   const handleDelete = (id) => {
+    // This functionality would typically be handled by a deleteService API call
+    // For now, we're just filtering the services in the state
     setServices(services.filter((service) => service.id !== id))
   }
 
   const openServiceDetails = (service) => {
     setSelectedService(service)
+    setFeedbackText(service.adminFeedback || "")
   }
 
   const closeServiceDetails = () => {
     setSelectedService(null)
+    setFeedbackText("")
   }
 
-  const openDocumentViewer = (fileName) => {
-    setViewingDocument(fileName)
+  const openDocumentViewer = async (serviceId) => {
+    if (!serviceId) {
+      toast.error("No PDF document available")
+      return
+    }
+    
+    // Reset PDF viewer state
+    setPdfLoading(true)
+    setPdfError(false)
+    setPdfBlobUrl(null)
+    
+    try {
+      // Set the viewing document to show the PDF viewer modal
+      setViewingDocument(serviceId)
+      
+      // Get the PDF data as a blob
+      const response = await axios.get(getServicePdfUrl(serviceId), {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        }
+      })
+      
+      // Create a blob URL from the PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      
+      setPdfBlobUrl(url)
+      setPdfLoading(false)
+    } catch (error) {
+      console.error("Error loading PDF:", error)
+      setPdfLoading(false)
+      setPdfError(true)
+    }
   }
 
   const closeDocumentViewer = () => {
+    // Revoke the blob URL to free up memory
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl)
+    }
+    
     setViewingDocument(null)
+    setPdfBlobUrl(null)
   }
 
-  const handleApprove = (id) => {
-    setServices(services.map((service) => (service.id === id ? { ...service, status: "Approved" } : service)))
-    closeServiceDetails()
+  const handleApprove = async (id) => {
+    try {
+      await approveService(id, feedbackText)
+      toast.success("Service approved successfully")
+      fetchServices()
+      closeServiceDetails()
+    } catch (error) {
+      console.error("Error approving service:", error)
+      toast.error("Failed to approve service")
+    }
   }
 
-  const handleReject = (id) => {
-    setServices(services.map((service) => (service.id === id ? { ...service, status: "Rejected" } : service)))
-    closeServiceDetails()
+  const handleReject = async (id) => {
+    if (!feedbackText.trim()) {
+      toast.error("Feedback is required when rejecting a service")
+      return
+    }
+    
+    try {
+      await rejectService(id, feedbackText)
+      toast.success("Service rejected successfully")
+      fetchServices()
+      closeServiceDetails()
+    } catch (error) {
+      console.error("Error rejecting service:", error)
+      toast.error("Failed to reject service")
+    }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Approved":
+      case "APPROVED":
         return "bg-emerald-100 text-emerald-700 border border-emerald-200"
-      case "Rejected":
+      case "REJECTED":
         return "bg-rose-100 text-rose-700 border border-rose-200"
       default:
         return "bg-amber-100 text-amber-700 border border-amber-200"
@@ -136,9 +182,9 @@ const ServiceList = () => {
 
   const getStatusBgColor = (status) => {
     switch (status) {
-      case "Approved":
+      case "APPROVED":
         return "bg-emerald-600"
-      case "Rejected":
+      case "REJECTED":
         return "bg-rose-600"
       default:
         return "bg-amber-500"
@@ -169,7 +215,7 @@ const ServiceList = () => {
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col md:flex-row sm:items-center sm:justify-between gap-4">
             <div className="relative flex-1 max-w-md">
               <input
                 type="text"
@@ -182,11 +228,15 @@ const ServiceList = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-500">Filter by:</span>
-              <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
+              <select
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
               </select>
             </div>
           </div>
@@ -216,7 +266,7 @@ const ServiceList = () => {
               {currentServices.map((service) => (
                 <tr key={service.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-semibold text-gray-900">{service.name}</div>
+                    <div className="font-semibold text-gray-900">{service.serviceName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -232,9 +282,9 @@ const ServiceList = () => {
                         service.status,
                       )}`}
                     >
-                      {service.status === "Approved" && <CheckCircle size={14} className="mr-1" />}
-                      {service.status === "Rejected" && <XCircle size={14} className="mr-1" />}
-                      {service.status === "Pending" && (
+                      {service.status === "APPROVED" && <CheckCircle size={14} className="mr-1" />}
+                      {service.status === "REJECTED" && <XCircle size={14} className="mr-1" />}
+                      {service.status === "PENDING" && (
                         <div className="w-2 h-2 rounded-full bg-amber-400 mr-1.5 mt-0.5" />
                       )}
                       {service.status}
@@ -244,10 +294,10 @@ const ServiceList = () => {
                     <div className="flex items-center">
                       <img
                         className="h-9 w-9 rounded-full mr-3 border-2 border-white shadow-sm"
-                        src={service.providerImage || "/placeholder.svg"}
-                        alt={service.providerName}
+                        src={getServiceImageUrl(service.serviceProvider.profilePicture) || "/placeholder.svg"}
+                        alt={service.serviceProvider.name}
                       />
-                      <span className="font-medium text-gray-700">{service.providerName}</span>
+                      <span className="font-medium text-gray-700">{service.serviceProvider.name}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -260,7 +310,7 @@ const ServiceList = () => {
                         <Eye size={18} />
                       </button>
                       <button
-                        onClick={() => openDocumentViewer(service.attachedFile)}
+                        onClick={() => openDocumentViewer(service.id)}
                         className="p-1.5 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
                         title="View document"
                       >
@@ -321,7 +371,7 @@ const ServiceList = () => {
             <div className="relative">
               <div className={`absolute inset-0 h-24 ${getStatusBgColor(selectedService.status)} opacity-90`}></div>
               <div className="relative px-6 py-4 flex justify-between items-center z-10">
-                <h3 className="text-xl font-bold text-white drop-shadow-sm">{selectedService.name}</h3>
+                <h3 className="text-xl font-bold text-white drop-shadow-sm">{selectedService.serviceName}</h3>
                 <button
                   onClick={closeServiceDetails}
                   className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -335,11 +385,11 @@ const ServiceList = () => {
               <div className="flex items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                 <img
                   className="h-16 w-16 rounded-full mr-4 border-2 border-white shadow-sm"
-                  src={selectedService.providerImage || "/placeholder.svg"}
-                  alt={selectedService.providerName}
+                  src={getServiceImageUrl(selectedService.serviceProvider.profilePicture) || "/placeholder.svg"}
+                  alt={selectedService.serviceProvider.name}
                 />
                 <div>
-                  <p className="text-lg font-bold text-gray-800">{selectedService.providerName}</p>
+                  <p className="text-lg font-bold text-gray-800">{selectedService.serviceProvider.name}</p>
                   <p className="text-sm text-gray-500">Service Provider</p>
                 </div>
               </div>
@@ -368,9 +418,9 @@ const ServiceList = () => {
                       selectedService.status,
                     )}`}
                   >
-                    {selectedService.status === "Approved" && <CheckCircle size={16} className="mr-1.5" />}
-                    {selectedService.status === "Rejected" && <XCircle size={16} className="mr-1.5" />}
-                    {selectedService.status === "Pending" && (
+                    {selectedService.status === "APPROVED" && <CheckCircle size={16} className="mr-1.5" />}
+                    {selectedService.status === "REJECTED" && <XCircle size={16} className="mr-1.5" />}
+                    {selectedService.status === "PENDING" && (
                       <div className="w-2.5 h-2.5 rounded-full bg-amber-400 mr-2 mt-0.5" />
                     )}
                     {selectedService.status}
@@ -381,14 +431,14 @@ const ServiceList = () => {
                   <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Document</p>
                   <div className="flex space-x-3">
                     <button
-                      onClick={() => openDocumentViewer(selectedService.attachedFile)}
+                      onClick={() => openDocumentViewer(selectedService.id)}
                       className="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors border border-purple-200"
                     >
                       <FileText size={16} className="mr-1.5" />
                       View
                     </button>
                     <a
-                      href={`/files/${selectedService.attachedFile}`}
+                      href={`/files/${selectedService.id}`}
                       download
                       className="inline-flex items-center px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200"
                     >
@@ -407,7 +457,7 @@ const ServiceList = () => {
             <div className="flex justify-end space-x-4 px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
               <button
                 onClick={() => handleReject(selectedService.id)}
-                disabled={selectedService.status === "Rejected"}
+                disabled={selectedService.status === "REJECTED"}
                 className="inline-flex items-center px-4 py-2 bg-white text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 <XCircle size={18} className="mr-2" />
@@ -415,7 +465,7 @@ const ServiceList = () => {
               </button>
               <button
                 onClick={() => handleApprove(selectedService.id)}
-                disabled={selectedService.status === "Approved"}
+                disabled={selectedService.status === "APPROVED"}
                 className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 <CheckCircle size={18} className="mr-2" />
@@ -498,4 +548,3 @@ const ServiceList = () => {
 }
 
 export default ServiceList
-
