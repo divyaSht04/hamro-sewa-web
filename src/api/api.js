@@ -8,33 +8,6 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor
-// api.interceptors.request.use(
-//   (config) => {
-//     const token = localStorage.getItem('token');
-//     if (token) {
-//       config.headers.Authorization = `Bearer ${token}`;
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
-
-// // Add a response interceptor
-// api.interceptors.response.use(
-//   (response) => response,
-//   async (error) => {
-//     if (error.response?.status === 401) {
-//       // Handle unauthorized error (e.g., clear token and redirect to login)
-//       localStorage.removeItem('token');
-//       window.location.href = '/login';
-//     }
-//     return Promise.reject(error);
-//   }
-// );
-
 axios.interceptors.request.use(
   (config) => {
     // Skip token check for login endpoint
@@ -56,7 +29,7 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401,error.response.status === 403) {
       // Don't automatically redirect on 401 during login
       if (!error.config.url.includes('/login')) {
         localStorage.clear();
