@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+  import { useEffect, useState } from "react"
 import { Route, Routes, useLocation } from "react-router-dom"
 import { ArrowUp } from "lucide-react"
 import Header from "./components/Header"
@@ -27,6 +27,8 @@ import { ROLES } from "./constants/roles"
 import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
 import { CustomerProfile } from "./pages/customer/CustomerProfile"
+import { AddEditService } from "./pages/serviceProvider/AddEditService"
+
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
   const location = useLocation()
@@ -39,7 +41,7 @@ function ScrollToTopButton() {
         setIsVisible(false)
       }
     }
-    
+
     window.addEventListener("scroll", toggleVisibility)
 
     return () => window.removeEventListener("scroll", toggleVisibility)
@@ -53,7 +55,12 @@ function ScrollToTopButton() {
   }
 
   // Hide button on login, register, and admin pages
-  if (location.pathname === "/login" || location.pathname === "/register" || location.pathname.startsWith("/admin") || location.pathname.startsWith("/provider")) {
+  if (
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/provider")
+  ) {
     return null
   }
 
@@ -80,50 +87,67 @@ function AppContent() {
     })
   }, [])
 
-  const showHeaderFooter = ![
-    "/login",
-    "/register",
-    "/register/user",
-    "/register/provider",
-    "/admin",
-    "/admin/profile",
-    "/admin/services",
-    "/provider",
-    "/provider/profile",
-    "/provider/services",
-    "/access-denied"
-  ].includes(location.pathname)
+  // Update the condition to hide header/footer on all provider routes
+  const showHeaderFooter =
+    ![
+      "/login",
+      "/register",
+      "/register/user",
+      "/register/provider",
+      "/admin",
+      "/admin/profile",
+      "/admin/services",
+      "/provider",
+      "/provider/dashboard",
+      "/provider/services",
+      "/provider/services/new", // Add this
+      "/provider/services/edit", // Add this
+      "/provider/profile", // Add this
+      "/access-denied",
+    ].includes(location.pathname) && !location.pathname.startsWith("/provider/") // Add this catch-all condition
 
   return (
     <div className="flex flex-col min-h-screen">
       {showHeaderFooter && <Header />}
-      <main className="flex-grow">
+      <main className={`flex-grow ${!showHeaderFooter ? "bg-gray-50" : ""}`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/services" element={<ServicePage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/login" element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          } />
-          <Route path="/register" element={
-            <PublicRoute>
-              <RegisterPage />
-            </PublicRoute>
-          } />
-          <Route path="/register/user" element={
-            <PublicRoute>
-              <UserRegisterPage />
-            </PublicRoute>
-          } />
-          <Route path="/register/provider" element={
-            <PublicRoute>
-              <ProviderRegisterPage />
-            </PublicRoute>
-          } />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/user"
+            element={
+              <PublicRoute>
+                <UserRegisterPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/provider"
+            element={
+              <PublicRoute>
+                <ProviderRegisterPage />
+              </PublicRoute>
+            }
+          />
           <Route path="/access-denied" element={<AccessDenied />} />
 
           {/* Protected Routes */}
@@ -180,6 +204,22 @@ function AppContent() {
             }
           />
           <Route
+            path="/provider/services/new"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
+                <AddEditService />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/provider/services/edit/:id"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
+                <AddEditService />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/provider/profile"
             element={
               <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
@@ -219,7 +259,7 @@ function App() {
       <Toaster position="top-right" />
       <AppContent />
     </AuthProvider>
-  );
+  )
 }
 
-export default App;
+export default App
