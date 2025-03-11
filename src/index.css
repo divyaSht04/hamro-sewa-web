@@ -1,19 +1,19 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 :root {
-  --color-primary: #8B5CF6;
-  --color-primary-light: #A78BFA;
-  --color-primary-dark: #7C3AED;
-  --color-secondary: #1F2937;
+  --color-primary: #8b5cf6;
+  --color-primary-light: #a78bfa;
+  --color-primary-dark: #7c3aed;
+  --color-secondary: #1f2937;
   --color-secondary-light: #374151;
   --color-secondary-dark: #111827;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: #F9FAFB;
+  font-family: "Inter", sans-serif;
+  background-color: #f9fafb;
   color: var(--color-secondary);
 }
 
@@ -37,50 +37,42 @@ body {
   border-color: var(--color-primary);
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Remove extra padding from main content */
+main {
+  padding-top: 0; /* Remove default padding */
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.animation-delay-300 {
-  animation-delay: 0.3s;
-}
-
-.animation-delay-600 {
-  animation-delay: 0.6s;
-}
-
-.animation-delay-900 {
-  animation-delay: 0.9s;
-}
-
-@keyframes scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-scroll {
-  animation: scroll 60s linear infinite;
-}
-
+/* Add smooth scrolling for all elements */
 * {
   scroll-behavior: smooth;
 }
 
-.clip-path-slant {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 0);
+/* Ensure proper spacing for sections that need it */
+section:first-of-type {
+  margin-top: 0;
+}
+
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a5b4fc;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f1f1f1;
 }

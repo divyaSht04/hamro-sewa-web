@@ -99,6 +99,11 @@ export const getServiceImageUrl = (serviceId) => {
   return `${API_BASE_URL}/provider-services/image/${serviceId}`;
 };
 
+// Helper function to get the image URL for a service provider
+export const getServiceProviderImageUrl = (providerId) => {
+  return `${API_BASE_URL}/service-providers/image/${providerId}`;
+};
+
 // Helper function to get the PDF URL for a service
 export const getServicePdfUrl = (serviceId) => {
   return `${API_BASE_URL}/provider-services/pdf/${serviceId}`;

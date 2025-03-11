@@ -18,7 +18,7 @@ export const getServiceProviderInfo = async (serviceProviderId) => {
       throw new Error('No authentication token found');
     }
 
-    const response = await axios.get(`${API_BASE_URL}/serviceProvider/info/${serviceProviderId}`, {
+    const response = await axios.get(`${API_BASE_URL}/service-providers/info/${serviceProviderId}`, {
       headers: getAuthHeaders()
     });
 
@@ -78,7 +78,7 @@ export const updateServiceProviderProfile = async (serviceProviderId, providerDa
     }
 
     const response = await axios.put(
-      `${API_BASE_URL}/serviceProvider/edit-serviceProvider/${serviceProviderId}`,
+      `${API_BASE_URL}/service-providers/edit-serviceProvider/${serviceProviderId}`,
       formData,
       {
         headers: {
