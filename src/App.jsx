@@ -8,6 +8,8 @@ import Footer from "./components/Footer"
 import HomePage from "./pages/staticPages/HomePage"
 import AboutUsPage from "./pages/staticPages/AboutUsPage"
 import ServicePage from "./pages/staticPages/ServicePage"
+import ServiceDetailsPage from "./pages/staticPages/ServiceDetailsPage"
+import BookingPage from "./pages/staticPages/BookingPage"
 import ContactPage from "./pages/staticPages/ContactPage"
 import { LoginPage } from "./pages/auth/LoginPage"
 import { RegisterPage } from "./pages/auth/RegisterPage"
@@ -21,6 +23,7 @@ import { ProviderRegisterPage } from "./pages/auth/ProviderRegisterPage"
 import { ServiceProviderDashboard } from "./pages/serviceProvider/Dashboard"
 import { ServiceProviderServiceList } from "./pages/serviceProvider/ServiceList"
 import { ServiceProviderProfile } from "./pages/serviceProvider/Profile"
+import { BookingManagement } from "./pages/serviceProvider/BookingManagemt"
 import { PrivateRoute } from "./auth/PrivateRoute"
 import { PublicRoute } from "./auth/PublicRoute"
 import { AuthProvider } from "./auth/AuthContext"
@@ -30,7 +33,6 @@ import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
 import { CustomerProfile } from "./pages/customer/CustomerProfile"
 import { AddEditService } from "./pages/serviceProvider/AddEditService"
-import ServiceDetailsPage from "./pages/staticPages/ServiceDetailsPage"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -106,10 +108,12 @@ function AppContent() {
       "/provider/services/new",
       "/provider/services/edit",
       "/provider/profile",
+      "/provider/bookings",
       "/access-denied",
     ].includes(location.pathname) &&
     !location.pathname.startsWith("/provider/") &&
-    !location.pathname.startsWith("/service-details/")
+    !location.pathname.startsWith("/service-details/") &&
+    !location.pathname.startsWith("/booking/")
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -121,6 +125,7 @@ function AppContent() {
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/services" element={<ServicePage />} />
           <Route path="/service-details/:id" element={<ServiceDetailsPage />} />
+          <Route path="/booking/:id" element={<BookingPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/login"
@@ -230,6 +235,14 @@ function AppContent() {
             element={
               <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
                 <ServiceProviderProfile />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/provider/bookings"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.SERVICE_PROVIDER]}>
+                <BookingManagement />
               </PrivateRoute>
             }
           />

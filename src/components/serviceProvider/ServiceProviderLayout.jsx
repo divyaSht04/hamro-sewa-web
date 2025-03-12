@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, ListTodo, UserCircle2, LogOut } from "lucide-react"
+import { LayoutDashboard, ListTodo, UserCircle2, LogOut, Calendar } from "lucide-react"
 import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
 
@@ -25,11 +25,12 @@ const Sidebar = () => {
   const navItems = [
     { name: "Dashboard", path: "/provider", icon: LayoutDashboard },
     { name: "My Services", path: "/provider/services", icon: ListTodo },
+    { name: "Bookings", path: "/provider/bookings", icon: Calendar },
     { name: "Profile", path: "/provider/profile", icon: UserCircle2 },
   ]
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-[#4CAF50] text-white flex flex-col">
+    <div className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col">
       {/* Header */}
       <div className="p-6">
         <h1 className="text-xl font-bold">Provider Panel</h1>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -493,12 +493,12 @@ export default function ServiceDetailsPage() {
                 </div>
               </div>
 
-              <button
-                className="w-full py-3 rounded-md font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-                onClick={() => alert("Booking service: " + service.name)}
+              <Link
+                to={`/booking/${service.id}`}
+                className="block w-full py-3 rounded-md font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors text-center"
               >
                 Book Now
-              </button>
+              </Link>
 
               <div className="flex items-center justify-center gap-4 mt-4">
                 <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">

@@ -1,14 +1,32 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { ArrowUp, ArrowDown, PlusCircle, Clock, CheckCircle, XCircle, AlertCircle, Star, Calendar, DollarSign, ChevronRight, Users, Award, BarChart2, TrendingUp, Briefcase } from 'lucide-react'
+import {
+  ArrowUp,
+  ArrowDown,
+  PlusCircle,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Star,
+  Calendar,
+  DollarSign,
+  ChevronRight,
+  Users,
+  Award,
+  BarChart2,
+  TrendingUp,
+  Briefcase,
+} from "lucide-react"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { useAuth } from "../../auth/AuthContext"
 import { Link } from "react-router-dom"
 import toast from "react-hot-toast"
-import api from "../../api/api"
 
 const StatCard = ({ title, value, icon: Icon, change, changeType, color, bgColor }) => (
-  <motion.div 
+  <motion.div
     whileHover={{ scale: 1.02 }}
     className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden`}
   >
@@ -19,8 +37,14 @@ const StatCard = ({ title, value, icon: Icon, change, changeType, color, bgColor
           <Icon className="w-6 h-6 text-white" />
         </div>
         {change && (
-          <div className={`flex items-center text-sm font-medium ${changeType === "increase" ? "text-green-500" : "text-red-500"}`}>
-            {changeType === "increase" ? <ArrowUp size={16} className="mr-1" /> : <ArrowDown size={16} className="mr-1" />}
+          <div
+            className={`flex items-center text-sm font-medium ${changeType === "increase" ? "text-green-500" : "text-red-500"}`}
+          >
+            {changeType === "increase" ? (
+              <ArrowUp size={16} className="mr-1" />
+            ) : (
+              <ArrowDown size={16} className="mr-1" />
+            )}
             <span>{change}%</span>
           </div>
         )}
@@ -46,7 +70,7 @@ const RecentActivity = ({ type, message, time, status }) => {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-all"
@@ -70,7 +94,7 @@ export function ServiceProviderDashboard() {
       change: "8",
       changeType: "increase",
       color: "bg-blue-500",
-      bgColor: "bg-blue-500"
+      bgColor: "bg-blue-500",
     },
     {
       title: "Active Orders",
@@ -79,7 +103,7 @@ export function ServiceProviderDashboard() {
       change: "12",
       changeType: "increase",
       color: "bg-amber-500",
-      bgColor: "bg-amber-500"
+      bgColor: "bg-amber-500",
     },
     {
       title: "Monthly Revenue",
@@ -88,7 +112,7 @@ export function ServiceProviderDashboard() {
       change: "5",
       changeType: "increase",
       color: "bg-green-500",
-      bgColor: "bg-green-500"
+      bgColor: "bg-green-500",
     },
     {
       title: "Average Rating",
@@ -97,10 +121,10 @@ export function ServiceProviderDashboard() {
       change: "2",
       changeType: "increase",
       color: "bg-purple-500",
-      bgColor: "bg-purple-500"
-    }
+      bgColor: "bg-purple-500",
+    },
   ])
-  
+
   const [recentActivities, setRecentActivities] = useState([
     {
       type: "service",
@@ -127,12 +151,12 @@ export function ServiceProviderDashboard() {
       status: "completed",
     },
   ])
-  
+
   const [performanceData, setPerformanceData] = useState({
     totalClients: "38",
     completedJobs: "26",
     totalEarnings: "$3,840",
-    responseRate: "94%"
+    responseRate: "94%",
   })
 
   useEffect(() => {
@@ -163,11 +187,12 @@ export function ServiceProviderDashboard() {
             <div>
               <h1 className="text-2xl font-bold">Welcome back, {user?.username || "Provider"}!</h1>
               <p className="mt-2 text-green-50">
-                You have <span className="font-semibold">4 active</span> service requests and <span className="font-semibold">2 pending</span> approvals
+                You have <span className="font-semibold">4 active</span> service requests and{" "}
+                <span className="font-semibold">2 pending</span> approvals
               </p>
             </div>
-            <Link 
-              to="/provider/services/new" 
+            <Link
+              to="/provider/services/new"
               className="mt-4 md:mt-0 bg-white text-green-600 px-4 py-2 rounded-lg font-medium flex items-center hover:bg-green-50 transition-colors shadow-sm"
             >
               <PlusCircle size={18} className="mr-2" />
@@ -207,29 +232,29 @@ export function ServiceProviderDashboard() {
               <h2 className="text-xl font-semibold text-gray-800">Performance Metrics</h2>
             </div>
             <div className="p-6 space-y-6">
-              <PerformanceMetric 
+              <PerformanceMetric
                 icon={<Users className="w-5 h-5 text-blue-500" />}
                 label="Total Clients"
                 value={performanceData.totalClients}
               />
-              <PerformanceMetric 
+              <PerformanceMetric
                 icon={<CheckCircle className="w-5 h-5 text-green-500" />}
                 label="Completed Jobs"
                 value={performanceData.completedJobs}
               />
-              <PerformanceMetric 
+              <PerformanceMetric
                 icon={<DollarSign className="w-5 h-5 text-amber-500" />}
                 label="Total Earnings"
                 value={performanceData.totalEarnings}
               />
-              <PerformanceMetric 
+              <PerformanceMetric
                 icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
                 label="Response Rate"
                 value={performanceData.responseRate}
               />
-              
-              <Link 
-                to="/provider/analytics" 
+
+              <Link
+                to="/provider/analytics"
                 className="mt-4 flex justify-center items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
                 <BarChart2 size={16} className="mr-2" />
@@ -243,27 +268,27 @@ export function ServiceProviderDashboard() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <QuickActionCard 
-              icon={<PlusCircle className="w-6 h-6 text-white" />} 
-              title="Add Service" 
+            <QuickActionCard
+              icon={<PlusCircle className="w-6 h-6 text-white" />}
+              title="Add Service"
               href="/provider/services/new"
               color="bg-blue-500"
             />
-            <QuickActionCard 
-              icon={<Briefcase className="w-6 h-6 text-white" />} 
-              title="My Services" 
+            <QuickActionCard
+              icon={<Briefcase className="w-6 h-6 text-white" />}
+              title="My Services"
               href="/provider/services"
               color="bg-green-500"
             />
-            <QuickActionCard 
-              icon={<Calendar className="w-6 h-6 text-white" />} 
-              title="Schedule" 
-              href="/provider/schedule"
+            <QuickActionCard
+              icon={<Calendar className="w-6 h-6 text-white" />}
+              title="Bookings"
+              href="/provider/bookings"
               color="bg-amber-500"
             />
-            <QuickActionCard 
-              icon={<Award className="w-6 h-6 text-white" />} 
-              title="Reviews" 
+            <QuickActionCard
+              icon={<Award className="w-6 h-6 text-white" />}
+              title="Reviews"
               href="/provider/reviews"
               color="bg-purple-500"
             />
@@ -285,13 +310,11 @@ const PerformanceMetric = ({ icon, label, value }) => (
 )
 
 const QuickActionCard = ({ icon, title, href, color }) => (
-  <Link 
+  <Link
     to={href}
     className="flex flex-col items-center bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all duration-300"
   >
-    <span className={`p-3 rounded-full ${color} mb-3`}>
-      {icon}
-    </span>
+    <span className={`p-3 rounded-full ${color} mb-3`}>{icon}</span>
     <span className="text-sm font-medium text-gray-700">{title}</span>
   </Link>
 )

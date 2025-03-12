@@ -3,7 +3,23 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link } from "react-router-dom"
-import { Search, Grid, Home, Trash2, Flower2, PaintBucket, Sofa, Star, Clock, DollarSign, PenToolIcon as Tool, Zap, Building2, Bug, Info } from 'lucide-react'
+import {
+  Search,
+  Grid,
+  Home,
+  Trash2,
+  Flower2,
+  PaintBucket,
+  Sofa,
+  Star,
+  Clock,
+  DollarSign,
+  PenToolIcon as Tool,
+  Zap,
+  Building2,
+  Bug,
+  Info,
+} from "lucide-react"
 
 const services = [
   {
@@ -199,7 +215,7 @@ export default function ServicePage() {
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">Categories</h2>
                 <div className="overflow-y-auto max-h-[calc(100vh-320px)] pr-2 -mr-2 space-y-2 custom-scrollbar">
                   <AnimatePresence>
-                    {categories.map(category => (
+                    {categories.map((category) => (
                       <motion.button
                         key={category}
                         initial={{ opacity: 0, y: 10 }}
@@ -207,17 +223,15 @@ export default function ServicePage() {
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
                         className={`w-full flex items-center p-3 rounded-md cursor-pointer mb-2 transition-all duration-200 ${
-                          selectedCategory === category 
-                            ? 'bg-purple-600 text-white shadow-md' 
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          selectedCategory === category
+                            ? "bg-purple-600 text-white shadow-md"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                         }`}
                         onClick={() => setSelectedCategory(category)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <div className="mr-3">
-                          {getCategoryIcon(category)}
-                        </div>
+                        <div className="mr-3">{getCategoryIcon(category)}</div>
                         <span className="font-medium">{category}</span>
                       </motion.button>
                     ))}
@@ -280,16 +294,19 @@ export default function ServicePage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Link 
+                          <Link
                             to={`/service-details/${service.id}`}
                             className="flex-1 flex items-center justify-center gap-2 bg-white border border-purple-600 text-purple-600 py-2 rounded-md font-medium hover:bg-purple-50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
                           >
                             <Info size={16} />
                             <span>View Details</span>
                           </Link>
-                          <button className="flex-1 bg-purple-600 text-white py-2 rounded-md font-medium hover:bg-purple-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
+                          <Link
+                            to={`/booking/${service.id}`}
+                            className="flex-1 bg-purple-600 text-white py-2 rounded-md font-medium hover:bg-purple-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-center"
+                          >
                             Book Now
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     </motion.div>
