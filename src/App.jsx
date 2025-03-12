@@ -1,4 +1,6 @@
-  import { useEffect, useState } from "react"
+"use client"
+
+import { useEffect, useState } from "react"
 import { Route, Routes, useLocation } from "react-router-dom"
 import { ArrowUp } from "lucide-react"
 import Header from "./components/Header"
@@ -28,6 +30,7 @@ import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
 import { CustomerProfile } from "./pages/customer/CustomerProfile"
 import { AddEditService } from "./pages/serviceProvider/AddEditService"
+import ServiceDetailsPage from "./pages/staticPages/ServiceDetailsPage"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -87,7 +90,7 @@ function AppContent() {
     })
   }, [])
 
-  // Update the condition to hide header/footer on all provider routes
+  // Update the condition to hide header/footer on all provider routes and service details page
   const showHeaderFooter =
     ![
       "/login",
@@ -100,11 +103,13 @@ function AppContent() {
       "/provider",
       "/provider/dashboard",
       "/provider/services",
-      "/provider/services/new", // Add this
-      "/provider/services/edit", // Add this
-      "/provider/profile", // Add this
+      "/provider/services/new",
+      "/provider/services/edit",
+      "/provider/profile",
       "/access-denied",
-    ].includes(location.pathname) && !location.pathname.startsWith("/provider/") // Add this catch-all condition
+    ].includes(location.pathname) &&
+    !location.pathname.startsWith("/provider/") &&
+    !location.pathname.startsWith("/service-details/")
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -115,6 +120,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/services" element={<ServicePage />} />
+          <Route path="/service-details/:id" element={<ServiceDetailsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/login"

@@ -2,22 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  Search,
-  Grid,
-  Home,
-  Trash2,
-  Flower2,
-  PaintBucket,
-  Sofa,
-  Star,
-  Clock,
-  DollarSign,
-  PenToolIcon as Tool,
-  Zap,
-  Building2,
-  Bug,
-} from "lucide-react"
+import { Link } from "react-router-dom"
+import { Search, Grid, Home, Trash2, Flower2, PaintBucket, Sofa, Star, Clock, DollarSign, PenToolIcon as Tool, Zap, Building2, Bug, Info } from 'lucide-react'
 
 const services = [
   {
@@ -149,6 +135,9 @@ const services = [
     icon: Bug,
   },
 ]
+
+// Export services for use in other components
+export { services }
 
 const categories = ["All", ...new Set(services.map((service) => service.category))]
 
@@ -290,9 +279,18 @@ export default function ServicePage() {
                             <span className="text-gray-600">{service.price}</span>
                           </div>
                         </div>
-                        <button className="w-full bg-purple-600 text-white py-2 rounded-md font-medium hover:bg-purple-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
-                          Book Now
-                        </button>
+                        <div className="flex gap-2">
+                          <Link 
+                            to={`/service-details/${service.id}`}
+                            className="flex-1 flex items-center justify-center gap-2 bg-white border border-purple-600 text-purple-600 py-2 rounded-md font-medium hover:bg-purple-50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+                          >
+                            <Info size={16} />
+                            <span>View Details</span>
+                          </Link>
+                          <button className="flex-1 bg-purple-600 text-white py-2 rounded-md font-medium hover:bg-purple-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
+                            Book Now
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
