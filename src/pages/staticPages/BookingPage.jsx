@@ -19,14 +19,16 @@ import {
   Building,
   CalendarCheck,
   Shield,
+  AlertCircle,
 } from "lucide-react"
-import { services } from "./ServicePage"
+import { getServiceById } from "../../services/providerServiceApi"
 
 export default function BookingPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [service, setService] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     date: "",
@@ -62,13 +64,20 @@ export default function BookingPage() {
   ]
 
   useEffect(() => {
-    // Simulate loading data
-    setLoading(true)
-    setTimeout(() => {
-      const foundService = services.find((s) => s.id === Number.parseInt(id))
-      setService(foundService)
-      setLoading(false)
-    }, 500)
+    const fetchServiceData = async () => {
+      try {
+        setLoading(true)
+        const fetchedService = await getServiceById(Number.parseInt(id))
+        setService(fetchedService)
+        setLoading(false)
+      } catch (err) {
+        console.error('Error fetching service:', err)
+        setError('Unable to load service. The server may be down or the service might not exist.')
+        setLoading(false)
+      }
+    }
+
+    fetchServiceData()
   }, [id])
 
   const handleInputChange = (e) => {
@@ -148,6 +157,25 @@ export default function BookingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="text-red-500 mb-4">
+          <AlertCircle size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Unavailable</h2>
+        <p className="text-gray-600 mb-6 text-center max-w-md">{error}</p>
+        <button
+          onClick={() => navigate("/services")}
+          className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Back to Services
+        </button>
       </div>
     )
   }
@@ -350,7 +378,7 @@ export default function BookingPage() {
                           value={formData.date}
                           onChange={handleInputChange}
                           min={new Date().toISOString().split("T")[0]}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                             errors.date ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         />
@@ -368,7 +396,7 @@ export default function BookingPage() {
                           name="time"
                           value={formData.time}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none bg-white ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none bg-white transition-all duration-300 ${
                             errors.time ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         >
@@ -399,7 +427,7 @@ export default function BookingPage() {
                           placeholder="Street address"
                           value={formData.address}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                             errors.address ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         />
@@ -423,7 +451,7 @@ export default function BookingPage() {
                             placeholder="City"
                             value={formData.city}
                             onChange={handleInputChange}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                               errors.city ? "border-red-300 bg-red-50" : "border-gray-300"
                             }`}
                           />
@@ -445,7 +473,7 @@ export default function BookingPage() {
                             placeholder="ZIP Code"
                             value={formData.zipCode}
                             onChange={handleInputChange}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                               errors.zipCode ? "border-red-300 bg-red-50" : "border-gray-300"
                             }`}
                           />
@@ -511,7 +539,7 @@ export default function BookingPage() {
                           placeholder="Your full name"
                           value={formData.name}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                             errors.name ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         />
@@ -531,7 +559,7 @@ export default function BookingPage() {
                           placeholder="Your phone number"
                           value={formData.phone}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                             errors.phone ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         />
@@ -551,7 +579,7 @@ export default function BookingPage() {
                           placeholder="Your email address"
                           value={formData.email}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
                             errors.email ? "border-red-300 bg-red-50" : "border-gray-300"
                           }`}
                         />

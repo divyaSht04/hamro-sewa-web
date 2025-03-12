@@ -177,3 +177,31 @@ export const getServiceImageUrl = (serviceId) => {
 export const getServicePdfUrl = (serviceId) => {
   return `${API_BASE_URL}/provider-services/pdf/${serviceId}`;
 };
+
+// Get services by status
+export const getServicesByStatus = async (status) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/provider-services/status/${status}`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching services by status:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Get all approved services
+export const getApprovedServices = async () => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/provider-services/approved`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching approved services:', error.response?.data || error.message);
+    throw error;
+  }
+};

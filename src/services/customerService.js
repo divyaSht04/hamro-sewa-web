@@ -50,3 +50,26 @@ export const updateCustomerProfile = async (customerId, customerData) => {
     throw new Error(error.response?.data?.message || 'Failed to update profile');
   }
 };
+
+export const changePassword = async (customerId, passwordData) => {
+  try {
+    const response = await axios.put(
+      `${API_BASE_URL}/customer/change-password/${customerId}`,
+      {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error in changePassword:", error);
+    throw new Error(error.response?.data?.message || 'Failed to change password');
+  }
+};
