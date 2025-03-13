@@ -1,162 +1,198 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
+import { useParams, useNavigate, Link } from "react-router-dom"
 import {
   ArrowLeft,
   Calendar,
   Clock,
-  MapPin,
-  DollarSign,
-  CheckCircle,
-  ChevronRight,
-  User,
-  Phone,
-  Mail,
   FileText,
-  Home,
-  Building,
-  CalendarCheck,
-  Shield,
+  Check,
   AlertCircle,
+  DollarSign,
+  MapPin,
+  User,
+  ChevronRight,
+  Shield,
 } from "lucide-react"
 import { getServiceById } from "../../services/providerServiceApi"
+import { createBooking } from "../../services/bookingService"
+import { useAuth } from "../../auth/AuthContext"
 
 export default function BookingPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+
+  // Service-related state
   const [service, setService] = useState(null)
+  const [provider, setProvider] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState({
-    date: "",
-    time: "",
-    address: "",
-    city: "",
-    zipCode: "",
-    instructions: "",
-    name: "",
-    phone: "",
-    email: "",
-    paymentMethod: "cash",
-    termsAccepted: false,
-  })
-  const [errors, setErrors] = useState({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [bookingComplete, setBookingComplete] = useState(false)
-  const [bookingReference, setBookingReference] = useState("")
 
-  // Available time slots
-  const timeSlots = [
-    "08:00 AM",
-    "09:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "01:00 PM",
-    "02:00 PM",
-    "03:00 PM",
-    "04:00 PM",
-    "05:00 PM",
-    "06:00 PM",
-  ]
+  // Booking-related state
+  const [bookingDate, setBookingDate] = useState("")
+  const [bookingTime, setBookingTime] = useState("")
+  const [bookingNotes, setBookingNotes] = useState("")
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingSuccess, setBookingSuccess] = useState(false)
+  const [bookingError, setBookingError] = useState(null)
+
+  // Form validation
+  const [formErrors, setFormErrors] = useState({})
+  const [formTouched, setFormTouched] = useState({
+    date: false,
+    time: false,
+  })
 
   useEffect(() => {
+    // Redirect if not logged in
+    if (!user) {
+      navigate("/login", { state: { from: `/booking/${id}` } })
+      return
+    }
+
     const fetchServiceData = async () => {
       try {
         setLoading(true)
-        const fetchedService = await getServiceById(Number.parseInt(id))
-        setService(fetchedService)
+        // Fetch service details
+        const serviceData = await getServiceById(Number.parseInt(id))
+
+        // Check if service is approved
+        if (serviceData.status !== "APPROVED") {
+          setError("This service is not available for booking at this time.")
+          setLoading(false)
+          return
+        }
+
+        setService(serviceData)
+
+        // Fetch provider details if available
+        if (serviceData.serviceProvider) {
+          setProvider(serviceData.serviceProvider)
+        }
+
         setLoading(false)
       } catch (err) {
-        console.error('Error fetching service:', err)
-        setError('Unable to load service. The server may be down or the service might not exist.')
+        console.error("Error fetching service details:", err)
+        setError("Unable to load service details. The service might not exist.")
         setLoading(false)
       }
     }
 
     fetchServiceData()
-  }, [id])
+  }, [id, user, navigate])
+
+  // Validate form fields
+  const validateField = (name, value) => {
+    let error = null
+
+    if (name === "date") {
+      if (!value) {
+        error = "Please select a date"
+      } else {
+        const selectedDate = new Date(value)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        if (selectedDate < today) {
+          error = "Please select a future date"
+        }
+      }
+    }
+
+    if (name === "time") {
+      if (!value) {
+        error = "Please select a time"
+      }
+    }
+
+    return error
+  }
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    })
+    const { name, value } = e.target
 
-    // Clear error when field is updated
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      })
+    if (name === "bookingDate") {
+      setBookingDate(value)
+      const error = validateField("date", value)
+      setFormErrors((prev) => ({ ...prev, date: error }))
+      setFormTouched((prev) => ({ ...prev, date: true }))
+    } else if (name === "bookingTime") {
+      setBookingTime(value)
+      const error = validateField("time", value)
+      setFormErrors((prev) => ({ ...prev, time: error }))
+      setFormTouched((prev) => ({ ...prev, time: true }))
+    } else if (name === "bookingNotes") {
+      setBookingNotes(value)
     }
   }
 
-  const validateStep = (step) => {
-    const newErrors = {}
-
-    if (step === 1) {
-      if (!formData.date) newErrors.date = "Please select a date"
-      if (!formData.time) newErrors.time = "Please select a time"
-      if (!formData.address) newErrors.address = "Please enter your address"
-      if (!formData.city) newErrors.city = "Please enter your city"
-      if (!formData.zipCode) newErrors.zipCode = "Please enter your ZIP code"
-    } else if (step === 2) {
-      if (!formData.name) newErrors.name = "Please enter your name"
-      if (!formData.phone) newErrors.phone = "Please enter your phone number"
-      if (!formData.email) newErrors.email = "Please enter your email"
-      if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-        newErrors.email = "Please enter a valid email address"
-      }
-    } else if (step === 3) {
-      if (!formData.termsAccepted) newErrors.termsAccepted = "You must accept the terms and conditions"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleNextStep = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(currentStep + 1)
-      window.scrollTo(0, 0)
-    }
-  }
-
-  const handlePrevStep = () => {
-    setCurrentStep(currentStep - 1)
-    window.scrollTo(0, 0)
-  }
-
-  const handleSubmit = (e) => {
+  // Handle booking creation
+  const handleBookService = async (e) => {
     e.preventDefault()
 
-    if (validateStep(currentStep)) {
-      setIsSubmitting(true)
+    // Validate all fields before submission
+    const dateError = validateField("date", bookingDate)
+    const timeError = validateField("time", bookingTime)
 
-      // Simulate API call
+    setFormErrors({
+      date: dateError,
+      time: timeError,
+    })
+
+    setFormTouched({
+      date: true,
+      time: true,
+    })
+
+    if (dateError || timeError) {
+      return
+    }
+
+    if (!user || !bookingDate || !bookingTime) return
+
+    setBookingLoading(true)
+    setBookingError(null)
+
+    try {
+      const bookingData = {
+        customerId: user.id,
+        providerServiceId: Number.parseInt(id),
+        bookingDate: `${bookingDate}T${bookingTime}:00`, // Format as ISO date time
+        notes: bookingNotes,
+        // Add other fields required by your backend
+      }
+
+      // Submit booking to backend
+      await createBooking(bookingData)
+
+      // Show success message
+      setBookingSuccess(true)
+
+      // Redirect to bookings page after a short delay
       setTimeout(() => {
-        setIsSubmitting(false)
-        setBookingComplete(true)
-        setBookingReference(`HM${Math.floor(100000 + Math.random() * 900000)}`)
-      }, 1500)
+        navigate("/customer/bookings")
+      }, 2000)
+    } catch (err) {
+      console.error("Error booking service:", err)
+      setBookingError(err.response?.data || "Failed to book service. Please try again.")
+    } finally {
+      setBookingLoading(false)
     }
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return ""
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+  const handleBack = () => {
+    navigate(`/services/${id}`)
   }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600 mb-4"></div>
+          <p className="text-gray-600 animate-pulse">Loading booking page...</p>
+        </div>
       </div>
     )
   }
@@ -167,14 +203,14 @@ export default function BookingPage() {
         <div className="text-red-500 mb-4">
           <AlertCircle size={48} />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Unavailable</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Booking Unavailable</h2>
         <p className="text-gray-600 mb-6 text-center max-w-md">{error}</p>
         <button
-          onClick={() => navigate("/services")}
+          onClick={handleBack}
           className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to Services
+          Back to Service
         </button>
       </div>
     )
@@ -185,186 +221,98 @@ export default function BookingPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Not Found</h2>
         <p className="text-gray-600 mb-6">The service you're trying to book doesn't exist or has been removed.</p>
-        <button
-          onClick={() => navigate("/services")}
+        <Link
+          to="/services"
           className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to Services
-        </button>
+          Browse Services
+        </Link>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+    <div className="min-h-screen bg-gray-50 py-12">
       {/* Back button */}
       <button
-        onClick={() => navigate(`/service-details/${id}`)}
+        onClick={handleBack}
         className="fixed top-4 left-4 z-50 flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
         aria-label="Go back"
       >
         <ArrowLeft size={22} className="text-gray-700" />
       </button>
 
-      <div className="container mx-auto px-4 py-16">
-        {bookingComplete ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 border border-purple-100"
-          >
-            <div className="flex flex-col items-center text-center mb-8">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle className="w-10 h-10 text-green-600" />
-              </div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-3">Booking Confirmed!</h1>
-              <p className="text-gray-600 max-w-md">
-                Your booking has been successfully confirmed. We've sent a confirmation email with all the details.
-              </p>
-            </div>
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-8">
+            <h1 className="text-3xl font-bold mb-2">Book Your Service</h1>
+            <p className="text-purple-100 text-lg">Complete your booking for {service.serviceName}</p>
+          </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 mb-8 border border-purple-100">
-              <h2 className="font-semibold text-gray-800 mb-4 flex items-center">
-                <CalendarCheck className="w-5 h-5 mr-2 text-purple-600" />
-                Booking Details
-              </h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                  <span className="text-gray-600">Reference Number:</span>
-                  <span className="font-medium text-purple-700 bg-purple-100 px-3 py-1 rounded-full text-sm">
-                    {bookingReference}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Service:</span>
-                  <span className="font-medium">{service.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Date:</span>
-                  <span className="font-medium">{formatDate(formData.date)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Time:</span>
-                  <span className="font-medium">{formData.time}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Address:</span>
-                  <span className="font-medium text-right">
-                    {formData.address}, {formData.city}, {formData.zipCode}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="text-gray-600">Total Amount:</span>
-                  <span className="font-bold text-lg text-purple-600">$110.00</span>
+          {/* Service summary */}
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <h2 className="text-xl font-semibold text-gray-800 mb-1">{service.serviceName}</h2>
+                {provider && <p className="text-gray-600">Provided by {provider.name}</p>}
+
+                <div className="mt-3 flex flex-wrap gap-4">
+                  <div className="flex items-center text-gray-700">
+                    <DollarSign className="w-5 h-5 text-purple-600 mr-1" />
+                    <span className="font-medium">Rs. {service.price.toFixed(2)}</span>
+                    {service.priceUnit && <span className="text-sm text-gray-500 ml-1">per {service.priceUnit}</span>}
+                  </div>
+
+                  <div className="flex items-center text-gray-700">
+                    <Clock className="w-5 h-5 text-purple-600 mr-1" />
+                    <span>{service.durationHours ? `${service.durationHours} hours` : "Duration varies"}</span>
+                  </div>
+
+                  {service.location && (
+                    <div className="flex items-center text-gray-700">
+                      <MapPin className="w-5 h-5 text-purple-600 mr-1" />
+                      <span>{service.location}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-8">
-              <div className="flex items-start gap-3">
-                <div className="text-blue-500 mt-0.5">
-                  <Shield size={20} />
-                </div>
-                <div>
-                  <h3 className="font-medium text-blue-800 mb-1">What's Next?</h3>
-                  <p className="text-blue-700 text-sm">
-                    The service provider will contact you before the appointment to confirm. You can pay with cash when
-                    the service is completed.
-                  </p>
-                </div>
+              <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium flex items-center">
+                <Check size={16} className="mr-1" />
+                Available for Booking
               </div>
             </div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => navigate("/")}
-                className="flex-1 py-3 px-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              >
-                Return to Home
-              </button>
-              <button
-                onClick={() => navigate("/services")}
-                className="flex-1 py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-              >
-                Book Another Service
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">Book Your Service</h1>
-            <p className="text-gray-600 mb-8 text-center">Complete the form below to book {service.name}</p>
-
-            {/* Progress steps */}
-            <div className="flex justify-between mb-10 relative">
-              <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 z-0"></div>
-              <div
-                className="absolute top-1/2 left-0 h-1 bg-purple-600 -translate-y-1/2 z-0"
-                style={{ width: `${(currentStep - 1) * 50}%` }}
-              ></div>
-
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="relative z-10 flex flex-col items-center">
+          {/* Booking form */}
+          <div className="p-8">
+            {bookingSuccess ? (
+              <div className="bg-green-50 text-green-800 p-8 rounded-lg mb-4 text-center border border-green-200">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <Check className="text-green-600" size={32} />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-medium mb-3">Booking Successful!</h3>
+                <p className="text-green-700 mb-4">
+                  Your booking has been confirmed. Redirecting to your bookings page...
+                </p>
+                <div className="mt-4 w-full bg-green-200 rounded-full h-2 overflow-hidden">
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      currentStep >= step ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-500"
-                    } transition-all duration-300 shadow-md`}
-                  >
-                    {currentStep > step ? (
-                      <CheckCircle size={22} />
-                    ) : step === 1 ? (
-                      <Calendar size={20} />
-                    ) : step === 2 ? (
-                      <User size={20} />
-                    ) : (
-                      <DollarSign size={20} />
-                    )}
-                  </div>
-                  <span
-                    className={`mt-3 text-sm font-medium ${currentStep >= step ? "text-purple-600" : "text-gray-500"}`}
-                  >
-                    {step === 1 ? "Service Details" : step === 2 ? "Contact Info" : "Payment"}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-8 border border-purple-100">
-              {/* Service summary */}
-              <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl mb-8 border border-purple-100">
-                <img
-                  src={service.image || "/placeholder.svg"}
-                  alt={service.name}
-                  className="w-20 h-20 object-cover rounded-lg shadow-md"
-                />
-                <div>
-                  <h2 className="font-bold text-gray-900 text-xl">{service.name}</h2>
-                  <p className="text-gray-600 text-sm">Provided by {service.provider}</p>
-                  <div className="flex items-center mt-2">
-                    <span className="font-medium text-purple-600 text-lg">{service.price}</span>
-                    <span className="mx-2 text-gray-400">•</span>
-                    <span className="text-gray-600 text-sm">{service.duration}</span>
-                  </div>
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ animation: "progress 2s ease-in-out forwards" }}
+                  ></div>
                 </div>
               </div>
-
-              <form onSubmit={handleSubmit}>
-                {/* Step 1: Service Details */}
-                {currentStep === 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                      <Calendar className="w-5 h-5 mr-2 text-purple-600" />
-                      Service Details
-                    </h3>
+            ) : (
+              <form onSubmit={handleBookService} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-6 text-gray-900 border-b pb-2">Booking Details</h3>
 
                     <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Select Date <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
@@ -374,365 +322,206 @@ export default function BookingPage() {
                         />
                         <input
                           type="date"
-                          name="date"
-                          value={formData.date}
+                          name="bookingDate"
+                          value={bookingDate}
                           onChange={handleInputChange}
                           min={new Date().toISOString().split("T")[0]}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                            errors.date ? "border-red-300 bg-red-50" : "border-gray-300"
+                          required
+                          className={`w-full pl-10 pr-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            formTouched.date && formErrors.date
+                              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500"
+                              : "border-gray-300"
                           }`}
                         />
                       </div>
-                      {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+                      {formTouched.date && formErrors.date && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.date}</p>
+                      )}
                     </div>
 
                     <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Select Time <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <select
-                          name="time"
-                          value={formData.time}
+                        <input
+                          type="time"
+                          name="bookingTime"
+                          value={bookingTime}
                           onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none bg-white transition-all duration-300 ${
-                            errors.time ? "border-red-300 bg-red-50" : "border-gray-300"
+                          required
+                          className={`w-full pl-10 pr-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            formTouched.time && formErrors.time
+                              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500"
+                              : "border-gray-300"
                           }`}
-                        >
-                          <option value="">Select a time slot</option>
-                          {timeSlots.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronRight
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 text-gray-400"
-                          size={18}
                         />
                       </div>
-                      {errors.time && <p className="mt-1 text-sm text-red-600">{errors.time}</p>}
+                      {formTouched.time && formErrors.time && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.time}</p>
+                      )}
                     </div>
 
                     <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
-                        Service Address <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                          type="text"
-                          name="address"
-                          placeholder="Street address"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                            errors.address ? "border-red-300 bg-red-50" : "border-gray-300"
-                          }`}
-                        />
-                      </div>
-                      {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">
-                          City <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <Building
-                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                            size={18}
-                          />
-                          <input
-                            type="text"
-                            name="city"
-                            placeholder="City"
-                            value={formData.city}
-                            onChange={handleInputChange}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                              errors.city ? "border-red-300 bg-red-50" : "border-gray-300"
-                            }`}
-                          />
-                        </div>
-                        {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">
-                          ZIP Code <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <MapPin
-                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                            size={18}
-                          />
-                          <input
-                            type="text"
-                            name="zipCode"
-                            placeholder="ZIP Code"
-                            value={formData.zipCode}
-                            onChange={handleInputChange}
-                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                              errors.zipCode ? "border-red-300 bg-red-50" : "border-gray-300"
-                            }`}
-                          />
-                        </div>
-                        {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode}</p>}
-                      </div>
-                    </div>
-
-                    <div className="mb-8">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
-                        Special Instructions (Optional)
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Additional Notes (Optional)
                       </label>
                       <div className="relative">
                         <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
                         <textarea
-                          name="instructions"
-                          placeholder="Any special requirements or instructions for the service provider"
-                          value={formData.instructions}
+                          name="bookingNotes"
+                          value={bookingNotes}
                           onChange={handleInputChange}
-                          rows={3}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        ></textarea>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={handleNextStep}
-                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
-                      >
-                        Next Step
-                        <ChevronRight size={18} />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 2: Contact Information */}
-                {currentStep === 2 && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                      <User className="w-5 h-5 mr-2 text-purple-600" />
-                      Contact Information
-                    </h3>
-
-                    <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
-                        Full Name <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                          type="text"
-                          name="name"
-                          placeholder="Your full name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                            errors.name ? "border-red-300 bg-red-50" : "border-gray-300"
-                          }`}
+                          rows={4}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="Add any specific requirements or questions..."
                         />
                       </div>
-                      {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                     </div>
+                  </div>
 
-                    <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
-                        Phone Number <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                          type="tel"
-                          name="phone"
-                          placeholder="Your phone number"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                            errors.phone ? "border-red-300 bg-red-50" : "border-gray-300"
-                          }`}
-                        />
+                  <div>
+                    <h3 className="text-lg font-medium mb-6 text-gray-900 border-b pb-2">Contact Information</h3>
+
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <div className="flex items-center mb-3">
+                        <User size={18} className="text-purple-600 mr-2" />
+                        <h4 className="font-medium text-gray-800">Your Information</h4>
                       </div>
-                      {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
-                    </div>
 
-                    <div className="mb-8">
-                      <label className="block text-gray-700 text-sm font-medium mb-2">
-                        Email Address <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Your email address"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
-                            errors.email ? "border-red-300 bg-red-50" : "border-gray-300"
-                          }`}
-                        />
-                      </div>
-                      {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                    </div>
-
-                    <div className="flex justify-between">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={handlePrevStep}
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <ArrowLeft size={18} />
-                        Previous
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={handleNextStep}
-                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
-                      >
-                        Next Step
-                        <ChevronRight size={18} />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 3: Payment */}
-                {currentStep === 3 && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                      <DollarSign className="w-5 h-5 mr-2 text-purple-600" />
-                      Payment Details
-                    </h3>
-
-                    <div className="mb-8">
-                      <label className="block text-gray-700 text-sm font-medium mb-3">Payment Method</label>
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-xl border border-green-100 mb-4">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="cash"
-                            checked={formData.paymentMethod === "cash"}
-                            onChange={handleInputChange}
-                            className="mr-3 h-5 w-5 text-green-600 focus:ring-green-500"
-                          />
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-800">Cash on Delivery</span>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Pay with cash after the service is completed to your satisfaction
-                            </p>
-                          </div>
-                          <DollarSign className="w-6 h-6 text-green-600" />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 mb-8 border border-purple-100">
-                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 mr-2 text-purple-600" />
-                        Order Summary
-                      </h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">{service.name}</span>
-                          <span>{service.price}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Service Fee</span>
-                          <span>$10.00</span>
-                        </div>
-                        <div className="border-t border-gray-200 pt-3 mt-3">
-                          <div className="flex justify-between items-center font-bold">
-                            <span>Total</span>
-                            <span className="text-purple-600 text-xl">$110.00</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mb-8">
-                      <label className="flex items-start cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="termsAccepted"
-                          checked={formData.termsAccepted}
-                          onChange={handleInputChange}
-                          className="mt-1 mr-3 h-5 w-5 text-purple-600 focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-gray-600">
-                          I agree to the{" "}
-                          <a href="#" className="text-purple-600 hover:underline">
-                            Terms of Service
-                          </a>{" "}
-                          and{" "}
-                          <a href="#" className="text-purple-600 hover:underline">
-                            Privacy Policy
-                          </a>
-                          . I understand that my personal data will be processed as described in the Privacy Policy.
-                        </span>
-                      </label>
-                      {errors.termsAccepted && <p className="mt-1 text-sm text-red-600">{errors.termsAccepted}</p>}
-                    </div>
-
-                    <div className="flex justify-between">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={handlePrevStep}
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <ArrowLeft size={18} />
-                        Previous
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md disabled:bg-purple-400 disabled:cursor-not-allowed"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            Confirm Booking
-                            <CheckCircle size={18} />
-                          </>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>
+                          Name: <span className="font-medium text-gray-800">{user.name || user.username}</span>
+                        </p>
+                        <p>
+                          Email: <span className="font-medium text-gray-800">{user.email}</span>
+                        </p>
+                        {user.phone && (
+                          <p>
+                            Phone: <span className="font-medium text-gray-800">{user.phone}</span>
+                          </p>
                         )}
-                      </motion.button>
+                      </div>
+
+                      <div className="mt-3 text-xs text-gray-500">
+                        This information will be shared with the service provider.
+                      </div>
                     </div>
-                  </motion.div>
+
+                    {provider && (
+                      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                        <div className="flex items-center mb-3">
+                          <User size={18} className="text-purple-600 mr-2" />
+                          <h4 className="font-medium text-gray-800">Service Provider</h4>
+                        </div>
+
+                        <div className="space-y-2 text-sm text-gray-600">
+                          <p>
+                            Name: <span className="font-medium text-gray-800">{provider.name}</span>
+                          </p>
+                          {provider.email && (
+                            <p>
+                              Email: <span className="font-medium text-gray-800">{provider.email}</span>
+                            </p>
+                          )}
+                          {provider.phone && (
+                            <p>
+                              Phone: <span className="font-medium text-gray-800">{provider.phone}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {bookingError && (
+                  <div className="bg-red-50 text-red-800 p-4 rounded-md mb-6 flex items-start border border-red-200">
+                    <AlertCircle className="mr-2 flex-shrink-0 mt-0.5" size={18} />
+                    <p>{bookingError}</p>
+                  </div>
                 )}
+
+                <div className="bg-blue-50 p-5 rounded-lg mb-6 flex items-start border border-blue-100">
+                  <Shield className="text-blue-500 mr-3 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Booking Information</p>
+                    <p className="mb-2">
+                      Your booking will be sent to the service provider for confirmation. You'll be notified once they
+                      accept or reject your booking.
+                    </p>
+                    <p>Payment will be handled directly with the service provider after the service is completed.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    type="submit"
+                    disabled={bookingLoading || !bookingDate || !bookingTime || formErrors.date || formErrors.time}
+                    className={`flex-1 py-3.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 
+                      transition-colors ${bookingLoading || !bookingDate || !bookingTime || formErrors.date || formErrors.time ? "opacity-50 cursor-not-allowed" : "shadow-md hover:shadow-lg"}`}
+                  >
+                    {bookingLoading ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        Confirm Booking
+                        <ChevronRight size={18} className="ml-1" />
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="flex-1 py-3.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Service details summary */}
+        <div className="mt-8 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <h3 className="text-lg font-medium mb-4 text-gray-900">Service Details</h3>
+          <div className="prose max-w-none text-gray-600">
+            <p>{service.description}</p>
+          </div>
+        </div>
       </div>
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes progress {
+          0% { width: 0% }
+          100% { width: 100% }
+        }
+      `}</style>
     </div>
   )
 }

@@ -65,6 +65,13 @@ export const getCustomerBookings = async (customerId) => {
 // Get all bookings for a service
 export const getServiceBookings = async (serviceId) => {
   try {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Return empty array if not authenticated
+      return [];
+    }
+    
     const response = await axios.get(
       `${API_BASE_URL}/bookings/service/${serviceId}`,
       {

@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FaCalendarAlt, FaSearch, FaFilter, FaEye, FaTimes } from "react-icons/fa"
-import { useAuth } from "../../auth/AuthContext"
+import { FaCalendarAlt, FaSearch, FaFilter, FaEye, FaTimes, FaHourglass, FaCheck, FaCheckCircle } from "react-icons/fa"
+import { useAuth } from "../../contexts/AuthContext"
 import { getCustomerBookings, cancelBooking } from "../../services/bookingService"
-import LoadingSpinner from "../../components/ui/LoadingSpinner"
+import LoadingSpinner from "../../components/common/LoadingSpinner"
+import ErrorDisplay from "../../components/common/ErrorDisplay"
 import { toast } from "react-hot-toast"
-import ErrorDisplay from "../../components/auth/ErrorDisplay"
+import { Link } from "next/link"
 
 const CustomerBookings = () => {
   const { user } = useAuth()
@@ -125,15 +126,15 @@ const CustomerBookings = () => {
   const getStatusBadgeClass = (status) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800 border border-yellow-200"
       case "confirmed":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 border border-green-200"
       case "completed":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800 border border-blue-200"
       case "cancelled":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800 border border-red-200"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 border border-gray-200"
     }
   }
 
@@ -149,6 +150,13 @@ const CustomerBookings = () => {
     <div className="bg-white rounded-lg shadow-md p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">My Bookings</h1>
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg mb-6 border border-purple-100">
+          <h2 className="font-medium text-gray-800 mb-2">Welcome to Your Bookings</h2>
+          <p className="text-gray-600 text-sm">
+            Here you can view and manage all your service bookings. Use the filters to find specific bookings or check
+            their status.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <input
@@ -197,12 +205,35 @@ const CustomerBookings = () => {
       </div>
 
       {filteredBookings.length === 0 ? (
-        <div className="text-center py-8">
-          <FaCalendarAlt className="mx-auto text-gray-300 text-5xl mb-4" />
-          <h3 className="text-xl font-medium text-gray-700 mb-2">No bookings found</h3>
-          <p className="text-gray-500">
-            {bookings.length === 0 ? "You haven't made any bookings yet." : "No bookings match your current filters."}
+        <div className="text-center py-12">
+          <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaCalendarAlt className="text-gray-400 text-3xl" />
+          </div>
+          <h3 className="text-xl font-medium text-gray-700 mb-3">No bookings found</h3>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">
+            {bookings.length === 0
+              ? "You haven't made any bookings yet. Browse our services and make your first booking!"
+              : "No bookings match your current filters. Try adjusting your search criteria."}
           </p>
+          {bookings.length === 0 ? (
+            <Link
+              href="/services"
+              className="inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+            >
+              Browse Services
+            </Link>
+          ) : (
+            <button
+              onClick={() => {
+                setSearchTerm("")
+                setStatusFilter("all")
+                setDateFilter("all")
+              }}
+              className="inline-flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -243,8 +274,16 @@ const CustomerBookings = () => {
                   </td>
                   <td className="py-4 px-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(booking.status)}`}
+                      className={`px-3 py-1 rounded-full text-xs font-medium flex items-center justify-center gap-1 ${getStatusBadgeClass(booking.status)}`}
                     >
+                      {booking.status.toLowerCase() === "pending" && (
+                        <FaHourglass className="text-yellow-600" size={10} />
+                      )}
+                      {booking.status.toLowerCase() === "confirmed" && <FaCheck className="text-green-600" size={10} />}
+                      {booking.status.toLowerCase() === "completed" && (
+                        <FaCheckCircle className="text-blue-600" size={10} />
+                      )}
+                      {booking.status.toLowerCase() === "cancelled" && <FaTimes className="text-red-600" size={10} />}
                       {booking.status}
                     </span>
                   </td>

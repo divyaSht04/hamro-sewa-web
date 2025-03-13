@@ -15,10 +15,7 @@ const getAuthHeaders = () => {
 export const getServiceReviews = async (serviceId) => {
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/reviews/service/${serviceId}`,
-      {
-        headers: getAuthHeaders()
-      }
+      `${API_BASE_URL}/reviews/service/${serviceId}`
     );
     return response.data;
   } catch (error) {
@@ -31,10 +28,7 @@ export const getServiceReviews = async (serviceId) => {
 export const getServiceAverageRating = async (serviceId) => {
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/reviews/service/${serviceId}/rating`,
-      {
-        headers: getAuthHeaders()
-      }
+      `${API_BASE_URL}/reviews/service/${serviceId}/rating`
     );
     return response.data;
   } catch (error) {

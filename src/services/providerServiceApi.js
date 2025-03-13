@@ -16,7 +16,6 @@ const getMultipartAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
     'Authorization': `Bearer ${token}`
-    // Don't set Content-Type here, axios will set it with the correct boundary for multipart/form-data
   };
 };
 
@@ -127,16 +126,9 @@ export const getProviderServices = async (providerId) => {
 // Get a specific service by ID
 export const getServiceById = async (serviceId) => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
+    // Don't require authentication for viewing service details
     const response = await axios.get(
-      `${API_BASE_URL}/provider-services/${serviceId}`,
-      {
-        headers: getAuthHeaders()
-      }
+      `${API_BASE_URL}/provider-services/${serviceId}`
     );
 
     return response.data;
@@ -170,7 +162,8 @@ export const deleteService = async (serviceId) => {
 
 // Get the image URL for a service
 export const getServiceImageUrl = (serviceId) => {
-  return `${API_BASE_URL}/provider-services/image/${serviceId}`;
+  console.log(`${API_BASE_URL}/provider-services/image/${serviceId}?t=${new Date().getTime()}`);
+  return `${API_BASE_URL}/provider-services/image/${serviceId}?t=${new Date().getTime()}`;
 };
 
 // Get the PDF URL for a service
