@@ -33,6 +33,7 @@ import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
 import { CustomerProfile } from "./pages/customer/CustomerProfile"
 import { AddEditService } from "./pages/serviceProvider/AddEditService"
+import  CustomerBookings  from "./pages/customer/CustomerBookings"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -261,6 +262,14 @@ function AppContent() {
             element={
               <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
                 <EditProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/bookings"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
+                <CustomerBookings />
               </PrivateRoute>
             }
           />
