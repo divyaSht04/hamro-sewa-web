@@ -233,7 +233,7 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-12 animate-fadeIn">
       {/* Back button */}
       <button
         onClick={handleBack}
@@ -288,7 +288,7 @@ export default function BookingPage() {
           {/* Booking form */}
           <div className="p-8">
             {bookingSuccess ? (
-              <div className="bg-green-50 text-green-800 p-8 rounded-lg mb-4 text-center border border-green-200">
+              <div className="bg-green-50 text-green-800 p-8 rounded-lg mb-4 text-center border border-green-200 animate-success">
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                     <Check className="text-green-600" size={32} />
@@ -306,8 +306,8 @@ export default function BookingPage() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleBookService} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleBookService} className="space-y-8 animate-fadeIn">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-staggered">
                   <div>
                     <h3 className="text-lg font-medium mb-6 text-gray-900 border-b pb-2">Booking Details</h3>
 
@@ -459,8 +459,7 @@ export default function BookingPage() {
                   <button
                     type="submit"
                     disabled={bookingLoading || !bookingDate || !bookingTime || formErrors.date || formErrors.time}
-                    className={`flex-1 py-3.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 
-                      transition-colors ${bookingLoading || !bookingDate || !bookingTime || formErrors.date || formErrors.time ? "opacity-50 cursor-not-allowed" : "shadow-md hover:shadow-lg"}`}
+                    className={`flex-1 py-3.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-all duration-300 ${bookingLoading || !bookingDate || !bookingTime || formErrors.date || formErrors.time ? "opacity-50 cursor-not-allowed" : "shadow-md hover:shadow-lg hover:translate-y-[-2px]"}`}
                   >
                     {bookingLoading ? (
                       <span className="flex items-center justify-center">
@@ -496,7 +495,7 @@ export default function BookingPage() {
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="flex-1 py-3.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                    className="flex-1 py-3.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-all duration-300 hover:shadow-md"
                   >
                     Cancel
                   </button>
@@ -517,6 +516,30 @@ export default function BookingPage() {
 
       {/* Add animation styles */}
       <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes staggered {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-staggered > * {
+          animation: staggered 0.5s ease-out forwards;
+        }
+        .animate-staggered > *:nth-child(1) { animation-delay: 0.1s; }
+        .animate-staggered > *:nth-child(2) { animation-delay: 0.2s; }
+        @keyframes success {
+          0% { opacity: 0; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-success {
+          animation: success 0.6s ease-out forwards;
+        }
         @keyframes progress {
           0% { width: 0% }
           100% { width: 100% }

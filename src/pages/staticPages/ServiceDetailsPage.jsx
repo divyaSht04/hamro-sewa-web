@@ -310,7 +310,7 @@ export default function ServiceDetailsPage() {
       </button>
 
       {/* Hero section with service image */}
-      <div className="relative w-full h-[450px] md:h-[500px] bg-gray-200 overflow-hidden">
+      <div className="relative w-full h-[450px] md:h-[500px] bg-gray-200 overflow-hidden animate-fadeIn">
         {!service.id && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
@@ -412,7 +412,7 @@ export default function ServiceDetailsPage() {
           {user && service.status === "APPROVED" && (
             <button
               onClick={() => navigate(`/booking/${service.id}`)}
-              className="mt-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-colors inline-flex items-center"
+              className="mt-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px] inline-flex items-center animate-fadeIn"
             >
               Book Now
               <ChevronRight size={18} className="ml-1" />
@@ -422,7 +422,7 @@ export default function ServiceDetailsPage() {
       </div>
 
       {/* Main content */}
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl animate-slideUp">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left column - Service details */}
           <div className="md:col-span-2 space-y-8">
@@ -465,7 +465,7 @@ export default function ServiceDetailsPage() {
             </div>
 
             {/* Tab content */}
-            <div className="bg-white rounded-lg shadow-sm p-6 -mt-8 pt-8">
+            <div className="bg-white rounded-lg shadow-sm p-6 -mt-8 pt-8 animate-fadeIn">
               {/* Overview tab */}
               {activeTab === "overview" && (
                 <div className="space-y-6 animate-fadeIn">
@@ -474,7 +474,7 @@ export default function ServiceDetailsPage() {
 
                   {/* Service details summary */}
                   <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md transition-shadow">
+                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300">
                       <div className="bg-purple-100 p-2 rounded-full">
                         <Clock className="text-purple-600" size={24} />
                       </div>
@@ -485,7 +485,7 @@ export default function ServiceDetailsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md transition-shadow">
+                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300">
                       <div className="bg-purple-100 p-2 rounded-full">
                         <DollarSign className="text-purple-600" size={24} />
                       </div>
@@ -494,7 +494,7 @@ export default function ServiceDetailsPage() {
                         <p className="text-gray-600">Rs. {service.price}</p>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md transition-shadow">
+                    <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300">
                       <div className="bg-purple-100 p-2 rounded-full">
                         <MapPin className="text-purple-600" size={24} />
                       </div>
@@ -504,7 +504,7 @@ export default function ServiceDetailsPage() {
                       </div>
                     </div>
                     {service.createdAt && (
-                      <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md transition-shadow">
+                      <div className="bg-gray-50 p-4 rounded-lg flex items-start space-x-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300">
                         <div className="bg-purple-100 p-2 rounded-full">
                           <Calendar className="text-purple-600" size={24} />
                         </div>
@@ -995,7 +995,29 @@ export default function ServiceDetailsPage() {
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out forwards;
+          animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slideUp {
+          animation: slideUp 0.5s ease-out forwards;
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slideIn {
+          animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        .animate-pulse-slow {
+          animation: pulse 2s infinite;
         }
         @keyframes progress {
           0% { width: 0% }

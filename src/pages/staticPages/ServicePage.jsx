@@ -18,24 +18,6 @@ import {
 } from "lucide-react"
 import { getApprovedServices, getServiceImageUrl } from "../../services/providerServiceApi"
 
-// Fallback service data in case API fails
-const fallbackServices = [
-  {
-    id: 1,
-    name: "Home Cleaning",
-    category: "Cleaning",
-    provider: "CleanCo",
-    description: "Professional home cleaning services",
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-    rating: 4.8,
-    duration: "2-3 hours",
-    price: "$50-$100",
-    icon: Home,
-  },
-  // ... other fallback services
-]
-
 // Fallback images based on category
 const fallbackImages = {
   Cleaning:
@@ -159,10 +141,7 @@ export default function ServicePage() {
                         <div className="h-6 bg-gray-200 rounded-md animate-pulse w-3/4 mb-2"></div>
                         <div className="h-4 bg-gray-200 rounded-md animate-pulse w-1/2 mb-4"></div>
                         <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full mb-4"></div>
-                        <div className="flex gap-2">
-                          <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/2"></div>
-                          <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/2"></div>
-                        </div>
+                        <div className="h-10 bg-gray-200 rounded-md animate-pulse w-full"></div>
                       </div>
                     </div>
                   ))}
@@ -357,21 +336,13 @@ export default function ServicePage() {
                               <span className="text-gray-600 font-medium">Rs. {service.price.toFixed(2)}</span>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Link
-                              to={`/service-details/${service.id}`}
-                              className="flex-1 flex items-center justify-center gap-2 bg-white border border-purple-600 text-purple-600 py-2 rounded-md font-medium hover:bg-purple-50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
-                            >
-                              <Info size={16} />
-                              <span>View Details</span>
-                            </Link>
-                            <Link
-                              to={`/service-details/${service.id}`}
-                              className="flex-1 bg-purple-600 text-white py-2 rounded-md font-medium hover:bg-purple-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-center"
-                            >
-                              Book Now
-                            </Link>
-                          </div>
+                          <Link
+                            to={`/service-details/${service.id}`}
+                            className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-2.5 rounded-md font-medium hover:bg-purple-700 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+                          >
+                            <Info size={18} />
+                            View Details
+                          </Link>
                         </div>
                       </motion.div>
                     ))}
