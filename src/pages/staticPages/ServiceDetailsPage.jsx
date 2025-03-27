@@ -2,26 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
-import {
-  ArrowLeft,
-  Star,
-  Clock,
-  DollarSign,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Globe,
-  Check,
-  AlertCircle,
-  FileText,
-  Download,
-  Info,
-  ChevronRight,
-  Heart,
-  Share2,
-  MessageCircle,
-} from "lucide-react"
+import {ArrowLeft,Star,Clock,DollarSign,Calendar,MapPin,Phone, Mail, Globe,Check, AlertCircle, FileText, Download, Info, ChevronRight, Heart, Share2,MessageCircle,} from "lucide-react"
 import { getServiceById, getServiceImageUrl, getServicePdfUrl } from "../../services/providerServiceApi"
 import { getServiceReviews, getServiceAverageRating, createReview } from "../../services/reviewService"
 import { createBooking, getServiceBookings } from "../../services/bookingService"
@@ -55,7 +36,6 @@ export default function ServiceDetailsPage() {
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
   const [bookingNotes, setBookingNotes] = useState("")
-  const [showBookingForm, setShowBookingForm] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState(null)
@@ -116,15 +96,11 @@ export default function ServiceDetailsPage() {
       // Get user's bookings for this service
       const bookings = await getServiceBookings(serviceId)
 
-      // Check if user has any COMPLETED bookings
       const hasCompletedBooking = bookings.some(
         (booking) => booking.customerId === userId && booking.status === "COMPLETED",
       )
-
-      // Check if user has already left a review
       const hasReview = reviews.some((review) => review.customerId === userId)
 
-      // User can review if they have a completed booking and haven't reviewed yet
       setCanReview(hasCompletedBooking && !hasReview)
     } catch (err) {
       console.error("Error checking if user can review:", err)
@@ -359,9 +335,8 @@ export default function ServiceDetailsPage() {
                 <Star
                   key={i}
                   size={16}
-                  className={`${
-                    i < Math.round(averageRating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-400"
-                  }`}
+                  className={`${i < Math.round(averageRating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-400"
+                    }`}
                 />
               ))}
               {averageRating ? (
@@ -374,13 +349,12 @@ export default function ServiceDetailsPage() {
             </div>
             {service.status && (
               <span
-                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${
-                  service.status === "APPROVED"
+                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${service.status === "APPROVED"
                     ? "bg-green-600"
                     : service.status === "PENDING"
                       ? "bg-yellow-500"
                       : "bg-red-600"
-                }`}
+                  }`}
               >
                 {service.status}
               </span>
@@ -431,32 +405,29 @@ export default function ServiceDetailsPage() {
               <nav className="flex">
                 <button
                   onClick={() => setActiveTab("overview")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${
-                    activeTab === "overview"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "overview"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  } transition-colors`}
+                    } transition-colors`}
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${
-                    activeTab === "reviews"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "reviews"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  } transition-colors`}
+                    } transition-colors`}
                 >
                   Reviews ({reviews.length})
                 </button>
                 {service.pdfPath && (
                   <button
                     onClick={() => setActiveTab("documents")}
-                    className={`py-4 px-6 font-medium text-sm flex-1 ${
-                      activeTab === "documents"
+                    className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "documents"
                         ? "border-b-2 border-purple-600 text-purple-600"
                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                    } transition-colors`}
+                      } transition-colors`}
                   >
                     Documents
                   </button>
@@ -523,13 +494,12 @@ export default function ServiceDetailsPage() {
                         <Info size={20} className="text-blue-500" />
                         <span className="font-medium">Service Status:</span>
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            service.status === "APPROVED"
+                          className={`px-2 py-1 text-xs rounded-full ${service.status === "APPROVED"
                               ? "bg-green-100 text-green-800"
                               : service.status === "PENDING"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {service.status}
                         </span>
@@ -563,11 +533,10 @@ export default function ServiceDetailsPage() {
                               <Star
                                 key={i}
                                 size={18}
-                                className={`${
-                                  i < Math.round(averageRating || 0)
+                                className={`${i < Math.round(averageRating || 0)
                                     ? "text-yellow-400 fill-yellow-400"
                                     : "text-gray-300"
-                                }`}
+                                  }`}
                               />
                             ))}
                           </div>
@@ -601,11 +570,10 @@ export default function ServiceDetailsPage() {
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={handleFilterByRating}
-                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                              filterRating
+                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${filterRating
                                 ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
                                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
-                            }`}
+                              }`}
                           >
                             {filterRating ? `${filterRating} Stars` : "All Ratings"}
                           </button>
@@ -648,11 +616,10 @@ export default function ServiceDetailsPage() {
                                         <Star
                                           key={i}
                                           size={14}
-                                          className={`${
-                                            i < Math.round(review.rating)
+                                          className={`${i < Math.round(review.rating)
                                               ? "text-yellow-400 fill-yellow-400"
                                               : "text-gray-300"
-                                          }`}
+                                            }`}
                                         />
                                       ))}
                                       <span className="ml-2 text-sm text-gray-500">
@@ -720,9 +687,8 @@ export default function ServiceDetailsPage() {
                                   <button key={i} type="button" onClick={() => setUserRating(i + 1)} className="p-1">
                                     <Star
                                       size={28}
-                                      className={`${
-                                        i < userRating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                                      } transition-colors hover:scale-110 transform`}
+                                      className={`${i < userRating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+                                        } transition-colors hover:scale-110 transform`}
                                     />
                                   </button>
                                 ))}
@@ -749,7 +715,6 @@ export default function ServiceDetailsPage() {
                                   <span className="flex items-center">
                                     <svg
                                       className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                      xmlns="http://www.w3.org/2000/svg"
                                       fill="none"
                                       viewBox="0 0 24 24"
                                     >
@@ -972,7 +937,6 @@ export default function ServiceDetailsPage() {
                     )}
                   </div>
                 )}
-
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <Link
                     to={`/providers/${provider.id}`}
@@ -987,43 +951,6 @@ export default function ServiceDetailsPage() {
           </div>
         </div>
       </div>
-
-      {/* Add animation styles */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.4s ease-out forwards;
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slideUp {
-          animation: slideUp 0.5s ease-out forwards;
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-slideIn {
-          animation: slideIn 0.3s ease-out forwards;
-        }
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
-        }
-        .animate-pulse-slow {
-          animation: pulse 2s infinite;
-        }
-        @keyframes progress {
-          0% { width: 0% }
-          100% { width: 100% }
-        }
-      `}</style>
     </div>
   )
 }

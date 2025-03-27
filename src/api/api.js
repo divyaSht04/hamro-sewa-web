@@ -2,7 +2,7 @@ import axios from 'axios';
 import { authService } from '../services/authService';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://localhost:8084',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,7 +25,6 @@ axios.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add axios interceptors for global error handling
 axios.interceptors.response.use(
   (response) => response,
   (error) => {

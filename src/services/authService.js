@@ -68,7 +68,6 @@ export const authService = {
             throw new Error('Invalid response format from server');
           }
 
-          // Get the role from user.roles array
           const userRoles = user.roles;
           if (!userRoles.length) {
             throw new Error('No roles found in response');

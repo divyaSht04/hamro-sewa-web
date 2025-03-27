@@ -161,16 +161,10 @@ export default function BookingPage() {
         providerServiceId: Number.parseInt(id),
         bookingDate: `${bookingDate}T${bookingTime}:00`, // Format as ISO date time
         notes: bookingNotes,
-        // Add other fields required by your backend
       }
-
-      // Submit booking to backend
       await createBooking(bookingData)
 
-      // Show success message
       setBookingSuccess(true)
-
-      // Redirect to bookings page after a short delay
       setTimeout(() => {
         navigate("/customer/bookings")
       }, 2000)
@@ -465,7 +459,6 @@ export default function BookingPage() {
                       <span className="flex items-center justify-center">
                         <svg
                           className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
                         >
