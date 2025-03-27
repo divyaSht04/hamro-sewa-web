@@ -147,25 +147,35 @@ export default function BookingPage() {
     })
 
     if (dateError || timeError) {
+      console.log("Form validation failed:", { dateError, timeError })
       return
     }
 
-    if (!user || !bookingDate || !bookingTime) return
+    if (!user || !bookingDate || !bookingTime) {
+      console.log("Missing required data:", { user, bookingDate, bookingTime })
+      return
+    }
 
     setBookingLoading(true)
     setBookingError(null)
 
     try {
       const bookingData = {
-        customerId: user.id,
+        customerId: Number(user.id), // Ensure this is a number
         providerServiceId: Number.parseInt(id),
-        bookingDate: `${bookingDate}T${bookingTime}:00`, // Format as ISO date time
-        notes: bookingNotes,
+        bookingDateTime: `${bookingDate}T${bookingTime}:00`, // Use the correct field name bookingDateTime
+        bookingNotes: bookingNotes, // Use the correct field name bookingNotes
       }
-      await createBooking(bookingData)
+      
+      console.log("Submitting booking data:", bookingData)
+      const response = await createBooking(bookingData)
+      console.log("Booking successful, response:", response)
 
       setBookingSuccess(true)
+      console.log("Setting redirect timeout to customer/bookings")
+      
       setTimeout(() => {
+        console.log("Executing redirect to /customer/bookings")
         navigate("/customer/bookings")
       }, 2000)
     } catch (err) {
@@ -177,7 +187,7 @@ export default function BookingPage() {
   }
 
   const handleBack = () => {
-    navigate(`/services/${id}`)
+    navigate(`/service-details/${id}`)
   }
 
   if (loading) {

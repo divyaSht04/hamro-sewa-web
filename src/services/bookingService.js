@@ -49,8 +49,13 @@ export const getBookingById = async (bookingId) => {
 // Get all bookings for a customer
 export const getCustomerBookings = async (customerId) => {
   try {
+    // Ensure customerId is properly converted to a number
+    const numericCustomerId = Number(customerId);
+    
+    console.log('Fetching bookings for customer ID:', numericCustomerId);
+    
     const response = await axios.get(
-      `${API_BASE_URL}/bookings/customer/${customerId}`,
+      `${API_BASE_URL}/bookings/customer/${numericCustomerId}`,
       {
         headers: getAuthHeaders()
       }
@@ -97,7 +102,7 @@ export const getProviderBookings = async (providerId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching provider bookings:', error.response?.data || error.message);
-    return []; // Return empty array instead of throwing
+    return []; 
   }
 };
 

@@ -39,6 +39,7 @@ export default function ServiceDetailsPage() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState(null)
+  const [showBookingForm, setShowBookingForm] = useState(false)
 
   useEffect(() => {
     const fetchServiceData = async () => {
@@ -150,7 +151,10 @@ export default function ServiceDetailsPage() {
   const handleBookService = async (e) => {
     e.preventDefault()
 
-    if (!user || !bookingDate || !bookingTime) return
+    if (!user || !bookingDate || !bookingTime) {
+      setBookingError("Please select a date and time for your booking")
+      return
+    }
 
     setBookingLoading(true)
     setBookingError(null)
@@ -161,14 +165,22 @@ export default function ServiceDetailsPage() {
         providerServiceId: Number.parseInt(id),
         bookingDate: `${bookingDate}T${bookingTime}:00`, // Format as ISO date time
         notes: bookingNotes,
-        // Add other fields required by your backend
+        // Status will be set to PENDING by default in the backend
       }
 
+      console.log("Submitting booking data:", bookingData)
+
       // Submit booking to backend
-      await createBooking(bookingData)
+      const response = await createBooking(bookingData)
+      console.log("Booking created successfully:", response)
 
       // Show success message
       setBookingSuccess(true)
+      
+      // Reset form fields
+      setBookingDate("")
+      setBookingTime("")
+      setBookingNotes("")
 
       // Redirect to bookings page after a short delay
       setTimeout(() => {
@@ -385,7 +397,10 @@ export default function ServiceDetailsPage() {
           {/* Quick action button */}
           {user && service.status === "APPROVED" && (
             <button
-              onClick={() => navigate(`/booking/${service.id}`)}
+              onClick={() => {
+                console.log("Navigating to booking page with ID:", service.id)
+                navigate(`/booking/${service.id}`)
+              }}
               className="mt-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px] inline-flex items-center animate-fadeIn"
             >
               Book Now
@@ -829,7 +844,10 @@ export default function ServiceDetailsPage() {
               {user ? (
                 service.status === "APPROVED" ? (
                   <button
-                    onClick={() => navigate(`/booking/${service.id}`)}
+                    onClick={() => {
+                      console.log("Navigating to booking page with ID:", service.id)
+                      navigate(`/booking/${service.id}`)
+                    }}
                     className="w-full py-3.5 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                   >
                     <Calendar size={18} />
@@ -857,40 +875,120 @@ export default function ServiceDetailsPage() {
                 </div>
               )}
 
-              {/* Service features/highlights */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Service Highlights</h3>
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <div className="bg-green-100 p-1 rounded-full mr-2 flex-shrink-0">
-                      <Check size={14} className="text-green-600" />
-                    </div>
-                    <span className="text-sm text-gray-600">Professional service provider</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="bg-green-100 p-1 rounded-full mr-2 flex-shrink-0">
-                      <Check size={14} className="text-green-600" />
-                    </div>
-                    <span className="text-sm text-gray-600">Verified by Hamro Sewa</span>
-                  </li>
-                  {service.status === "APPROVED" && (
-                    <li className="flex items-start">
-                      <div className="bg-green-100 p-1 rounded-full mr-2 flex-shrink-0">
-                        <Check size={14} className="text-green-600" />
+              {/* Booking form */}
+              {showBookingForm && (
+                <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
+                  <h3 className="text-xl font-semibold mb-4">Book this Service</h3>
+                  
+                  {bookingSuccess ? (
+                    <div className="bg-green-50 p-4 rounded-md mb-4">
+                      <div className="flex items-start">
+                        <CheckCircle className="text-green-500 mt-0.5 mr-2" size={20} />
+                        <div>
+                          <h4 className="font-semibold text-green-800">Booking Successful!</h4>
+                          <p className="text-green-700 mt-1">
+                            Your booking request has been submitted successfully. Redirecting to your bookings page...
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-sm text-gray-600">Approved quality service</span>
-                    </li>
-                  )}
-                  {averageRating >= 4 && (
-                    <li className="flex items-start">
-                      <div className="bg-green-100 p-1 rounded-full mr-2 flex-shrink-0">
-                        <Check size={14} className="text-green-600" />
+                    </div>
+                  ) : (
+                    <form onSubmit={handleBookService}>
+                      <div className="space-y-4">
+                        {bookingError && (
+                          <div className="bg-red-50 p-4 rounded-md mb-4">
+                            <div className="flex">
+                              <XCircle className="text-red-500 mr-2" size={20} />
+                              <p className="text-red-700">{bookingError}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <label htmlFor="bookingDate" className="block text-sm font-medium text-gray-700 mb-1">
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            id="bookingDate"
+                            value={bookingDate}
+                            onChange={(e) => setBookingDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="bookingTime" className="block text-sm font-medium text-gray-700 mb-1">
+                            Time
+                          </label>
+                          <input
+                            type="time"
+                            id="bookingTime"
+                            value={bookingTime}
+                            onChange={(e) => setBookingTime(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                            required
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Choose a time between the service provider's working hours.
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="bookingNotes" className="block text-sm font-medium text-gray-700 mb-1">
+                            Notes (Optional)
+                          </label>
+                          <textarea
+                            id="bookingNotes"
+                            value={bookingNotes}
+                            onChange={(e) => setBookingNotes(e.target.value)}
+                            rows={3}
+                            placeholder="Add any specific details or requirements for your booking"
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                          />
+                        </div>
+                        
+                        <div className="bg-blue-50 p-4 rounded-md">
+                          <div className="flex items-start">
+                            <AlertTriangle className="text-blue-500 mt-0.5 mr-2" size={20} />
+                            <div className="text-sm text-blue-700">
+                              <p>
+                                Your booking will start in the <strong>PENDING</strong> status. The service provider needs to confirm it before it's finalized.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowBookingForm(false)}
+                            className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={bookingLoading}
+                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {bookingLoading ? (
+                              <span className="flex items-center">
+                                <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                                Processing...
+                              </span>
+                            ) : (
+                              "Book Now"
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-sm text-gray-600">Highly rated by customers</span>
-                    </li>
+                    </form>
                   )}
-                </ul>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Provider info card */}
