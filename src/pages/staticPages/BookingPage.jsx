@@ -506,38 +506,6 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
-
-      {/* Add animation styles */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-        @keyframes staggered {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-staggered > * {
-          animation: staggered 0.5s ease-out forwards;
-        }
-        .animate-staggered > *:nth-child(1) { animation-delay: 0.1s; }
-        .animate-staggered > *:nth-child(2) { animation-delay: 0.2s; }
-        @keyframes success {
-          0% { opacity: 0; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.05); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        .animate-success {
-          animation: success 0.6s ease-out forwards;
-        }
-        @keyframes progress {
-          0% { width: 0% }
-          100% { width: 100% }
-        }
-      `}</style>
     </div>
   )
 }

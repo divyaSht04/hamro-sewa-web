@@ -10,7 +10,6 @@ const api = axios.create({
 
 axios.interceptors.request.use(
   (config) => {
-    // Skip token check for login endpoint
     if (config.url.includes('/login')) {
       return config;
     }

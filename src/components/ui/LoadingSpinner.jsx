@@ -2,7 +2,6 @@ const LoadingSpinner = ({ size = "w-5 h-5" }) => {
     return (
       <svg
         className={`animate-spin ${size} text-white`}
-        xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
       >

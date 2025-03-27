@@ -70,7 +70,6 @@ export default function CustomerBookings() {
     }
   }
 
-  // Filter bookings based on status and search query
   const filteredBookings = bookings.filter((booking) => {
     // Filter by status
     if (filterStatus !== "all" && booking.status !== filterStatus) {
@@ -150,7 +149,7 @@ export default function CustomerBookings() {
     }
   }
 
-  // Format date
+
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return new Intl.DateTimeFormat("en-US", {
