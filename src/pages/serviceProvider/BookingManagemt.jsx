@@ -25,104 +25,8 @@ import {
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
-
-// Mock data for bookings
-const mockBookings = [
-  {
-    id: "BK1001",
-    serviceName: "Home Cleaning",
-    customerName: "John Smith",
-    customerEmail: "john.smith@example.com",
-    customerPhone: "+1 (555) 123-4567",
-    date: "2025-03-15",
-    time: "10:00 AM",
-    address: "123 Main Street",
-    city: "Springfield",
-    zipCode: "12345",
-    instructions: "Please bring eco-friendly cleaning supplies.",
-    status: "pending",
-    price: "$100.00",
-    serviceFee: "$10.00",
-    totalAmount: "$110.00",
-    createdAt: "2025-03-10T14:30:00Z",
-  },
-  {
-    id: "BK1002",
-    serviceName: "Plumbing Repair",
-    customerName: "Emily Johnson",
-    customerEmail: "emily.j@example.com",
-    customerPhone: "+1 (555) 987-6543",
-    date: "2025-03-16",
-    time: "02:00 PM",
-    address: "456 Oak Avenue",
-    city: "Springfield",
-    zipCode: "12345",
-    instructions: "The kitchen sink is leaking.",
-    status: "pending",
-    price: "$150.00",
-    serviceFee: "$10.00",
-    totalAmount: "$160.00",
-    createdAt: "2025-03-11T09:15:00Z",
-  },
-  {
-    id: "BK1003",
-    serviceName: "Electrical Work",
-    customerName: "Michael Brown",
-    customerEmail: "michael.b@example.com",
-    customerPhone: "+1 (555) 456-7890",
-    date: "2025-03-17",
-    time: "09:00 AM",
-    address: "789 Pine Street",
-    city: "Springfield",
-    zipCode: "12345",
-    instructions: "Need to install new light fixtures in the living room.",
-    status: "accepted",
-    price: "$200.00",
-    serviceFee: "$10.00",
-    totalAmount: "$210.00",
-    createdAt: "2025-03-12T11:45:00Z",
-    responseDate: "2025-03-12T14:20:00Z",
-    responseComment: "Looking forward to helping you with your electrical needs.",
-  },
-  {
-    id: "BK1004",
-    serviceName: "Gardening",
-    customerName: "Sarah Wilson",
-    customerEmail: "sarah.w@example.com",
-    customerPhone: "+1 (555) 789-0123",
-    date: "2025-03-18",
-    time: "01:00 PM",
-    address: "321 Maple Drive",
-    city: "Springfield",
-    zipCode: "12345",
-    instructions: "Please focus on the front yard landscaping.",
-    status: "rejected",
-    price: "$80.00",
-    serviceFee: "$10.00",
-    totalAmount: "$90.00",
-    createdAt: "2025-03-13T10:30:00Z",
-    responseDate: "2025-03-13T16:45:00Z",
-    responseComment: "Unfortunately, we are fully booked on this date. Please try booking for a different date.",
-  },
-  {
-    id: "BK1005",
-    serviceName: "Interior Painting",
-    customerName: "David Lee",
-    customerEmail: "david.l@example.com",
-    customerPhone: "+1 (555) 234-5678",
-    date: "2025-03-20",
-    time: "10:00 AM",
-    address: "567 Elm Street",
-    city: "Springfield",
-    zipCode: "12345",
-    instructions: "Need to paint the master bedroom. The paint is already purchased.",
-    status: "pending",
-    price: "$250.00",
-    serviceFee: "$10.00",
-    totalAmount: "$260.00",
-    createdAt: "2025-03-14T13:20:00Z",
-  },
-]
+import { getProviderBookings, updateBookingStatus, cancelBooking } from "../../services/bookingService"
+import { format } from "date-fns"
 
 export function BookingManagement() {
   const { user } = useAuth()
@@ -134,19 +38,34 @@ export function BookingManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("date-desc")
   const [showResponseModal, setShowResponseModal] = useState(false)
-  const [responseType, setResponseType] = useState(null) // 'accept' or 'reject'
+  const [responseType, setResponseType] = useState(null) // 'CONFIRMED' or 'CANCELLED' or 'COMPLETED'
   const [responseComment, setResponseComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate API call to fetch bookings
+    fetchBookings()
+  }, [user?.id])
+
+  const fetchBookings = async () => {
+    if (!user?.id) return;
+    
     setIsLoading(true)
-    setTimeout(() => {
-      setBookings(mockBookings)
-      setFilteredBookings(mockBookings)
+    setError(null)
+    
+    try {
+      const data = await getProviderBookings(user.id)
+      console.log('Provider bookings:', data)
+      setBookings(data || [])
+      setFilteredBookings(data || [])
+    } catch (err) {
+      console.error("Failed to fetch bookings:", err)
+      setError("Failed to load bookings. Please try again.")
+      toast.error("Failed to load bookings")
+    } finally {
       setIsLoading(false)
-    }, 800)
-  }, [])
+    }
+  }
 
   useEffect(() => {
     // Filter and sort bookings when filters or search term changes
@@ -162,9 +81,10 @@ export function BookingManagement() {
       const searchLower = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (booking) =>
-          booking.customerName.toLowerCase().includes(searchLower) ||
-          booking.serviceName.toLowerCase().includes(searchLower) ||
-          booking.id.toLowerCase().includes(searchLower),
+          (booking.customer?.firstName?.toLowerCase()?.includes(searchLower) || '') ||
+          (booking.customer?.lastName?.toLowerCase()?.includes(searchLower) || '') ||
+          (booking.providerService?.serviceName?.toLowerCase()?.includes(searchLower) || '') ||
+          (booking.id?.toString()?.includes(searchLower) || '')
       )
     }
 
@@ -172,19 +92,15 @@ export function BookingManagement() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "date-asc":
-          return new Date(a.date) - new Date(b.date)
+          return new Date(a.bookingDateTime || 0) - new Date(b.bookingDateTime || 0)
         case "date-desc":
-          return new Date(b.date) - new Date(a.date)
+          return new Date(b.bookingDateTime || 0) - new Date(a.bookingDateTime || 0)
         case "created-asc":
-          return new Date(a.createdAt) - new Date(b.createdAt)
+          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
         case "created-desc":
-          return new Date(b.createdAt) - new Date(a.createdAt)
-        case "price-asc":
-          return Number.parseFloat(a.totalAmount.replace("$", "")) - Number.parseFloat(b.totalAmount.replace("$", ""))
-        case "price-desc":
-          return Number.parseFloat(b.totalAmount.replace("$", "")) - Number.parseFloat(a.totalAmount.replace("$", ""))
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         default:
-          return new Date(b.date) - new Date(a.date)
+          return new Date(b.bookingDateTime || 0) - new Date(a.bookingDateTime || 0)
       }
     })
 
@@ -199,510 +115,568 @@ export function BookingManagement() {
     setSelectedBooking(null)
   }
 
-  const handleResponseClick = (type) => {
+  const openResponseModal = (booking, type) => {
+    setSelectedBooking(booking)
     setResponseType(type)
     setResponseComment("")
     setShowResponseModal(true)
   }
 
-  const handleResponseSubmit = () => {
-    setIsSubmitting(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      const updatedBookings = bookings.map((booking) => {
-        if (booking.id === selectedBooking.id) {
-          return {
-            ...booking,
-            status: responseType === "accept" ? "accepted" : "rejected",
-            responseDate: new Date().toISOString(),
-            responseComment: responseComment,
-          }
-        }
-        return booking
-      })
-
-      setBookings(updatedBookings)
-      setSelectedBooking({
-        ...selectedBooking,
-        status: responseType === "accept" ? "accepted" : "rejected",
-        responseDate: new Date().toISOString(),
-        responseComment: responseComment,
-      })
-
-      setShowResponseModal(false)
-      setIsSubmitting(false)
-
-      toast.success(responseType === "accept" ? "Booking accepted successfully!" : "Booking rejected successfully!")
-    }, 1000)
+  const closeResponseModal = () => {
+    setShowResponseModal(false)
+    setResponseType(null)
+    setResponseComment("")
   }
 
-  const formatDate = (dateString) => {
-    const options = { year: "numeric", month: "long", day: "numeric" }
-    return new Date(dateString).toLocaleDateString(undefined, options)
+  const handleStatusUpdate = async () => {
+    if (!selectedBooking?.id || !responseType) return
+    
+    setIsSubmitting(true)
+    
+    try {
+      await updateBookingStatus(selectedBooking.id, responseType)
+      
+      // Update local state
+      const updatedBookings = bookings.map(booking => 
+        booking.id === selectedBooking.id 
+          ? { ...booking, status: responseType } 
+          : booking
+      )
+      
+      setBookings(updatedBookings)
+      closeResponseModal()
+      const statusMessage = {
+        'CONFIRMED': 'accepted',
+        'CANCELLED': 'rejected',
+        'COMPLETED': 'marked as complete'
+      }
+      toast.success(`Booking ${statusMessage[responseType] || responseType.toLowerCase()} successfully`)
+    } catch (error) {
+      const statusMessage = {
+        'CONFIRMED': 'accepting',
+        'CANCELLED': 'rejecting',
+        'COMPLETED': 'completing'
+      }
+      console.error(`Error ${statusMessage[responseType] || responseType.toLowerCase()} booking:`, error)
+      toast.error(`Failed to ${statusMessage[responseType] || responseType.toLowerCase()} booking`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const formatDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return 'N/A';
+    
+    try {
+      const date = new Date(dateTimeStr);
+      return format(date, "MMM d, yyyy 'at' h:mm a");
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateTimeStr;
+    }
   }
 
   const getStatusBadge = (status) => {
+    if (!status) return null;
+    
     switch (status) {
-      case "pending":
+      case "PENDING":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <Clock size={12} className="mr-1" />
             Pending
           </span>
         )
-      case "accepted":
+      case "CONFIRMED":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             <CheckCircle size={12} className="mr-1" />
-            Accepted
+            Confirmed
           </span>
         )
-      case "rejected":
+      case "COMPLETED":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={12} className="mr-1" />
+            Completed
+          </span>
+        )
+      case "CANCELLED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={12} className="mr-1" />
-            Rejected
+            Cancelled
           </span>
         )
       default:
-        return null
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            {status}
+          </span>
+        )
     }
   }
 
-  return (
-    <ServiceProviderLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Booking Management</h1>
-            <p className="text-gray-600 mt-1">View and manage your service bookings</p>
-          </div>
+  const getCustomerFullName = (customer) => {
+    if (!customer) return 'Unknown Customer';
+    
+    const firstName = customer.firstName || '';
+    const lastName = customer.lastName || '';
+    
+    return `${firstName} ${lastName}`.trim() || 'Unknown Customer';
+  }
+
+  const renderBookingsList = () => {
+    if (isLoading) {
+      return (
+        <div className="py-12 flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
+      )
+    }
 
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          {/* Filters and Search */}
-          <div className="border-b border-gray-200">
-            <div className="p-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    placeholder="Search by customer name, service, or booking ID..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                </div>
+    if (error) {
+      return (
+        <div className="text-center py-12">
+          <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-red-800">{error}</h3>
+          <button 
+            onClick={fetchBookings}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md"
+          >
+            Try Again
+          </button>
+        </div>
+      )
+    }
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative">
-                    <select
-                      className="appearance-none pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 bg-white"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="pending">Pending</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                  </div>
+    if (filteredBookings.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <CalendarCheck size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">No bookings found</h3>
+          <p className="text-gray-500 mt-2">
+            {statusFilter !== "all" 
+              ? `You don't have any ${statusFilter.toLowerCase()} bookings.` 
+              : "You don't have any bookings yet."}
+          </p>
+        </div>
+      )
+    }
 
-                  <div className="relative">
-                    <select
-                      className="appearance-none pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 bg-white"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                    >
-                      <option value="date-desc">Sort by: Latest Service Date</option>
-                      <option value="date-asc">Sort by: Earliest Service Date</option>
-                      <option value="created-desc">Sort by: Recently Created</option>
-                      <option value="created-asc">Sort by: Oldest Created</option>
-                      <option value="price-desc">Sort by: Highest Price</option>
-                      <option value="price-asc">Sort by: Lowest Price</option>
-                    </select>
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bookings List */}
-          {isLoading ? (
-            <div className="p-12 flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-800"></div>
-            </div>
-          ) : (
-            <>
-              {filteredBookings.length === 0 ? (
-                <div className="py-16 text-center">
-                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Calendar className="text-gray-400" size={32} />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">No bookings found</h3>
-                  <p className="text-gray-500">Try adjusting your search terms or filters</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto divide-y divide-gray-100">
-                  {filteredBookings.map((booking) => (
-                    <motion.div
-                      key={booking.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="p-4 sm:p-6 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <CalendarCheck className="w-6 h-6 text-green-600" />
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h3 className="text-lg font-semibold text-gray-900 truncate">{booking.serviceName}</h3>
-                            <div className="flex items-center gap-2">
-                              {getStatusBadge(booking.status)}
-                              <span className="text-sm text-gray-500">{booking.id}</span>
-                            </div>
+    return (
+      <div className="overflow-hidden">
+        <div className="align-middle inline-block min-w-full">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Booking Details
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredBookings.map((booking) => (
+                  <tr key={booking.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {booking.providerService?.serviceName || "Unknown Service"}
                           </div>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                            <div className="flex items-center text-gray-600">
-                              <User size={14} className="mr-1" />
-                              {booking.customerName}
-                            </div>
-                            <div className="flex items-center text-gray-600">
-                              <Calendar size={14} className="mr-1" />
-                              {formatDate(booking.date)}
-                            </div>
-                            <div className="flex items-center text-gray-600">
-                              <Clock size={14} className="mr-1" />
-                              {booking.time}
-                            </div>
-                            <div className="flex items-center text-gray-600">
-                              <DollarSign size={14} className="mr-1" />
-                              {booking.totalAmount}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                          <button
-                            onClick={() => handleViewBooking(booking)}
-                            className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                          >
-                            <Eye size={16} className="mr-1.5" />
-                            View Details
-                          </button>
-
-                          {booking.status === "pending" && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setSelectedBooking(booking)
-                                  handleResponseClick("accept")
-                                }}
-                                className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                              >
-                                <CheckCircle size={16} className="mr-1.5" />
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedBooking(booking)
-                                  handleResponseClick("reject")
-                                }}
-                                className="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                              >
-                                <XCircle size={16} className="mr-1.5" />
-                                Reject
-                              </button>
-                            </>
-                          )}
+                          <div className="text-sm text-gray-500">Booking #{booking.id}</div>
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{getCustomerFullName(booking.customer)}</div>
+                      <div className="text-sm text-gray-500">{booking.customer?.email || "No email provided"}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDateTime(booking.bookingDateTime)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(booking.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleViewBooking(booking)}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-full transition-colors"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        
+                        {booking.status === "PENDING" && (
+                          <>
+                            <button
+                              onClick={() => openResponseModal(booking, "CONFIRMED")}
+                              className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 p-1.5 rounded-full transition-colors"
+                              title="Accept booking"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                            <button
+                              onClick={() => openResponseModal(booking, "CANCELLED")}
+                              className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-1.5 rounded-full transition-colors"
+                              title="Reject booking"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </>
+                        )}
+                        
+                        {booking.status === "CONFIRMED" && (
+                          <button
+                            onClick={() => openResponseModal(booking, "COMPLETED")}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-full transition-colors"
+                            title="Mark as completed"
+                          >
+                            <CalendarCheck size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Booking Details Modal */}
-      {selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-auto overflow-hidden relative"
+  // The rest of your component code...
+
+  return (
+    <ServiceProviderLayout>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
+            <p className="text-gray-600 mt-1">Manage and respond to customer booking requests</p>
+          </div>
+          <button
+            onClick={fetchBookings}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <div className="relative h-16 bg-gradient-to-r from-gray-800 to-gray-900 flex items-center px-6">
-              <h2 className="text-xl font-bold text-white flex items-center">
-                <CalendarCheck className="w-6 h-6 mr-2" />
-                Booking Details
-              </h2>
-              <div className="absolute top-0 right-0 p-4">
-                <button
-                  onClick={closeBookingDetails}
-                  className="p-2 bg-white bg-opacity-20 backdrop-blur-md rounded-full hover:bg-opacity-30 transition-colors text-white"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
+            Refresh Bookings
+          </button>
+        </div>
 
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+        {/* Filters */}
+        <div className="bg-white shadow rounded-lg mb-6">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={18} className="text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by customer name, service, or booking ID..."
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-4">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{selectedBooking.serviceName}</h3>
-                  <p className="text-gray-600">Booking ID: {selectedBooking.id}</p>
-                </div>
-                <div>{getStatusBadge(selectedBooking.status)}</div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                    Customer Information
-                  </h4>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                    <div className="flex items-start gap-3">
-                      <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Name</p>
-                        <p className="font-medium text-gray-900">{selectedBooking.customerName}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium text-gray-900">{selectedBooking.customerEmail}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium text-gray-900">{selectedBooking.customerPhone}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Details</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Date</p>
-                        <p className="font-medium text-gray-900">{formatDate(selectedBooking.date)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Time</p>
-                        <p className="font-medium text-gray-900">{selectedBooking.time}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">Total Amount</p>
-                        <p className="font-medium text-gray-900">{selectedBooking.totalAmount}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Location</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {selectedBooking.address}, {selectedBooking.city}, {selectedBooking.zipCode}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedBooking.instructions && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                    Special Instructions
-                  </h4>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <p className="text-gray-700">{selectedBooking.instructions}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selectedBooking.status !== "pending" && selectedBooking.responseComment && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Your Response</h4>
-                  <div
-                    className={`p-4 rounded-lg ${
-                      selectedBooking.status === "accepted"
-                        ? "bg-green-50 border border-green-100"
-                        : "bg-red-50 border border-red-100"
-                    }`}
+                  <label htmlFor="status-filter" className="sr-only">
+                    Filter by status
+                  </label>
+                  <select
+                    id="status-filter"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="block w-full py-2 pl-3 pr-10 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   >
-                    <div className="flex items-start gap-3">
-                      {selectedBooking.status === "accepted" ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500 mt-0.5" />
-                      )}
-                      <div>
-                        <p
-                          className={`font-medium ${
-                            selectedBooking.status === "accepted" ? "text-green-800" : "text-red-800"
-                          } mb-1`}
-                        >
-                          {selectedBooking.status === "accepted" ? "Accepted" : "Rejected"} on{" "}
-                          {formatDate(selectedBooking.responseDate)}
-                        </p>
-                        <p className="text-gray-700">{selectedBooking.responseComment}</p>
+                    <option value="all">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="sort-by" className="sr-only">
+                    Sort by
+                  </label>
+                  <select
+                    id="sort-by"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="block w-full py-2 pl-3 pr-10 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                  >
+                    <option value="date-desc">Date (Newest First)</option>
+                    <option value="date-asc">Date (Oldest First)</option>
+                    <option value="created-desc">Created (Newest First)</option>
+                    <option value="created-asc">Created (Oldest First)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bookings list */}
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          {renderBookingsList()}
+        </div>
+
+        {/* Booking Detail Modal */}
+        {selectedBooking && (
+          <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black opacity-40" onClick={closeBookingDetails}></div>
+            <div className="relative bg-white w-full max-w-3xl rounded-lg shadow-lg mx-4">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={closeBookingDetails}
+                  className="bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
+                >
+                  <span className="sr-only">Close</span>
+                  <X size={20} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Booking Details</h3>
+                <div className="mt-2 bg-blue-50 border border-blue-100 rounded-md p-4">
+                  <h4 className="text-md font-medium text-blue-800">
+                    {selectedBooking.providerService?.serviceName || 'Unknown Service'}
+                  </h4>
+                  <p className="text-sm text-blue-600 mt-1">
+                    <span className="font-medium">Booking ID:</span> #{selectedBooking.id}
+                  </p>
+                  <div className="mt-2 flex items-center">
+                    {getStatusBadge(selectedBooking.status)}
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Customer Information</h4>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <User className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                        <span>{getCustomerFullName(selectedBooking.customer)}</span>
                       </div>
+                      {selectedBooking.customer?.email && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Mail className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                          <span>{selectedBooking.customer.email}</span>
+                        </div>
+                      )}
+                      {selectedBooking.customer?.phoneNumber && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Phone className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                          <span>{selectedBooking.customer.phoneNumber}</span>
+                        </div>
+                      )}
+                      {selectedBooking.customer?.address && (
+                        <div className="flex items-start text-sm text-gray-500">
+                          <MapPin className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400 mt-0.5" />
+                          <span>{selectedBooking.customer.address}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900">Booking Details</h4>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Calendar className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                        <span>{formatDateTime(selectedBooking.bookingDateTime)}</span>
+                      </div>
+                      {selectedBooking.createdAt && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                          <span>Booked on: {formatDateTime(selectedBooking.createdAt)}</span>
+                        </div>
+                      )}
+                      {selectedBooking.providerService?.price && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <DollarSign className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                          <span>Service Price: Rs. {selectedBooking.providerService.price}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
 
-              <div className="flex justify-end gap-4 mt-6">
+                {selectedBooking.bookingNotes && (
+                  <div className="mt-6">
+                    <h4 className="font-medium text-gray-900">Customer Notes</h4>
+                    <div className="mt-2 bg-gray-50 rounded-md p-3 text-sm text-gray-500">
+                      {selectedBooking.bookingNotes}
+                    </div>
+                  </div>
+                )}
+
+                {selectedBooking.status === "PENDING" && (
+                  <div className="mt-6">
+                    <div className="flex justify-end space-x-4">
+                      <button
+                        onClick={() => openResponseModal(selectedBooking, "CONFIRMED")}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        <CheckCircle className="mr-2 h-5 w-5" />
+                        Accept Booking
+                      </button>
+                      <button
+                        onClick={() => openResponseModal(selectedBooking, "CANCELLED")}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        <XCircle className="mr-2 h-5 w-5" />
+                        Reject Booking
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedBooking.status === "CONFIRMED" && (
+                  <div className="mt-6">
+                    <div className="flex justify-end space-x-4">
+                      <button
+                        onClick={() => openResponseModal(selectedBooking, "COMPLETED")}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <CalendarCheck className="mr-2 h-5 w-5" />
+                        Mark as Completed
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Response Modal */}
+        {showResponseModal && selectedBooking && (
+          <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black opacity-40" onClick={closeResponseModal}></div>
+            <div className="relative bg-white w-full max-w-md rounded-lg shadow-lg mx-4">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
                 <button
-                  onClick={closeBookingDetails}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={closeResponseModal}
+                  className="bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
                 >
-                  Close
+                  <span className="sr-only">Close</span>
+                  <X size={20} aria-hidden="true" />
                 </button>
+              </div>
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  {responseType === "CONFIRMED" ? "Accept Booking" : responseType === "CANCELLED" ? "Reject Booking" : "Mark Booking as Complete"}
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">
+                    {responseType === "CONFIRMED"
+                      ? "Are you sure you want to accept this booking? The customer will be notified of your decision."
+                      : responseType === "CANCELLED"
+                      ? "Are you sure you want to reject this booking? The customer will be notified of your decision."
+                      : "Are you sure you want to mark this booking as complete?"}
+                  </p>
+                </div>
 
-                {selectedBooking.status === "pending" && (
-                  <>
-                    <button
-                      onClick={() => handleResponseClick("accept")}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <CheckCircle size={16} className="inline mr-2" />
-                      Accept Booking
-                    </button>
-                    <button
-                      onClick={() => handleResponseClick("reject")}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      <XCircle size={16} className="inline mr-2" />
-                      Reject Booking
-                    </button>
-                  </>
-                )}
+                <div className="mt-4">
+                  <label htmlFor="response-comment" className="block text-sm font-medium text-gray-700">
+                    Message to Customer (Optional)
+                  </label>
+                  <div className="mt-1">
+                    <textarea
+                      id="response-comment"
+                      name="comment"
+                      rows={3}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder={
+                        responseType === "CONFIRMED"
+                          ? "Add any additional information for the customer..."
+                          : responseType === "CANCELLED"
+                          ? "Let the customer know why you're rejecting this booking..."
+                          : "Add any additional information for the customer..."
+                      }
+                      value={responseComment}
+                      onChange={(e) => setResponseComment(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleStatusUpdate}
+                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      responseType === "CONFIRMED"
+                        ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                        : responseType === "COMPLETED"
+                        ? "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                        : "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                    } ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""}`}
+                  >
+                    {isSubmitting ? (
+                      <span className="inline-flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : responseType === "CONFIRMED" ? (
+                      <>
+                        <CheckCircle size={16} className="mr-2" />
+                        Accept
+                      </>
+                    ) : responseType === "CANCELLED" ? (
+                      <>
+                        <XCircle size={16} className="mr-2" />
+                        Reject
+                      </>
+                    ) : (
+                      <>
+                        <CalendarCheck size={16} className="mr-2" />
+                        Complete
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeResponseModal}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Response Modal */}
-      {showResponseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-lg max-w-md w-full p-6"
-          >
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              {responseType === "accept" ? "Accept Booking" : "Reject Booking"}
-            </h3>
-
-            <div
-              className={`p-4 rounded-lg mb-4 ${
-                responseType === "accept" ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {responseType === "accept" ? (
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
-                )}
-                <p className="text-gray-700">
-                  {responseType === "accept"
-                    ? "You are about to accept this booking. The customer will be notified of your decision."
-                    : "You are about to reject this booking. Please provide a reason for the rejection."}
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                <MessageSquare className="w-4 h-4 inline mr-2" />
-                {responseType === "accept" ? "Message to Customer (Optional)" : "Reason for Rejection"}
-              </label>
-              <textarea
-                value={responseComment}
-                onChange={(e) => setResponseComment(e.target.value)}
-                placeholder={
-                  responseType === "accept"
-                    ? "Add any additional information for the customer..."
-                    : "Please explain why you're rejecting this booking..."
-                }
-                rows={4}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                required={responseType === "reject"}
-              ></textarea>
-              {responseType === "reject" && !responseComment && (
-                <p className="mt-1 text-sm text-red-600">Please provide a reason for rejection</p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowResponseModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResponseSubmit}
-                disabled={(responseType === "reject" && !responseComment) || isSubmitting}
-                className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                  responseType === "accept" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>{responseType === "accept" ? "Accept Booking" : "Reject Booking"}</>
-                )}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </ServiceProviderLayout>
   )
 }
+
+export default BookingManagement

@@ -123,7 +123,6 @@ export const updateBookingStatus = async (bookingId, status) => {
   }
 };
 
-// Cancel a booking
 export const cancelBooking = async (bookingId) => {
   try {
     const response = await axios.delete(
@@ -136,5 +135,21 @@ export const cancelBooking = async (bookingId) => {
   } catch (error) {
     console.error('Error cancelling booking:', error.response?.data || error.message);
     throw error;
+  }
+};
+
+// Check if a booking has been reviewed
+export const checkBookingReviewStatus = async (bookingId) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/reviews/booking/${bookingId}/exists`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error checking booking review status:', error.response?.data || error.message);
+    return false;
   }
 };

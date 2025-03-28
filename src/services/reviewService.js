@@ -33,7 +33,7 @@ export const getServiceAverageRating = async (serviceId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching service average rating:', error.response?.data || error.message);
-    return null; // Return null instead of throwing to handle missing ratings gracefully
+    return null;
   }
 };
 
@@ -50,6 +50,39 @@ export const createReview = async (reviewData) => {
     return response.data;
   } catch (error) {
     console.error('Error creating review:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Update an existing review
+export const updateReview = async (reviewId, reviewData) => {
+  try {
+    const response = await axios.put(
+      `${API_BASE_URL}/reviews/${reviewId}`,
+      reviewData,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating review:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Delete a review
+export const deleteReview = async (reviewId, customerId) => {
+  try {
+    const response = await axios.delete(
+      `${API_BASE_URL}/reviews/${reviewId}?customerId=${customerId}`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting review:', error.response?.data || error.message);
     throw error;
   }
 };

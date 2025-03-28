@@ -16,9 +16,15 @@ import {
   Filter,
   RefreshCw,
   Trash2,
+  Star,
+  MessageSquare,
+  X,
+  Edit2,
 } from "lucide-react"
 import { useAuth } from "../../auth/AuthContext"
-import { getCustomerBookings, cancelBooking } from "../../services/bookingService"
+import { getCustomerBookings, cancelBooking, checkBookingReviewStatus } from "../../services/bookingService"
+import { createReview, updateReview, deleteReview, getCustomerReviews } from "../../services/reviewService"
+import toast from "react-hot-toast"
 
 // Error boundary component
 class ErrorBoundary extends React.Component {
@@ -66,10 +72,37 @@ export default function CustomerBookings() {
   const [sortBy, setSortBy] = useState("date-desc")
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [cancellingId, setCancellingId] = useState(null)
+  
+  // Review state
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState(null)
+  const [reviewText, setReviewText] = useState("")
+  const [reviewRating, setReviewRating] = useState(5)
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+  const [isEditingReview, setIsEditingReview] = useState(false)
+  const [existingReviewId, setExistingReviewId] = useState(null)
+  const [userReviews, setUserReviews] = useState([])
+  const [isDeletingReview, setIsDeletingReview] = useState(false)
 
   useEffect(() => {
     fetchBookings()
   }, [user])
+
+  useEffect(() => {
+    // Fetch user's reviews when user is available
+    if (user?.id) {
+      fetchUserReviews()
+    }
+  }, [user])
+
+  const fetchUserReviews = async () => {
+    try {
+      const reviews = await getCustomerReviews(user.id)
+      setUserReviews(reviews || [])
+    } catch (err) {
+      console.error("Error fetching user reviews:", err)
+    }
+  }
 
   const fetchBookings = async () => {
     if (!user) return
@@ -83,7 +116,25 @@ export default function CustomerBookings() {
       if (user && user.id) {
         const data = await getCustomerBookings(user.id)
         console.log("Successfully fetched bookings:", data)
-        setBookings(data || [])
+        
+        // For each completed booking, check if it has been reviewed
+        if (data && data.length > 0) {
+          const updatedBookings = await Promise.all(data.map(async (booking) => {
+            if (booking.status === "COMPLETED") {
+              try {
+                const isReviewed = await checkBookingReviewStatus(booking.id)
+                return { ...booking, isReviewed }
+              } catch (err) {
+                console.error(`Error checking review status for booking ${booking.id}:`, err)
+                return booking
+              }
+            }
+            return booking
+          }))
+          setBookings(updatedBookings)
+        } else {
+          setBookings(data || [])
+        }
       } else {
         console.error("Invalid user ID:", user?.id)
         setError("Unable to fetch bookings: Invalid user ID")
@@ -113,6 +164,159 @@ export default function CustomerBookings() {
     } finally {
       setCancellingId(null)
     }
+  }
+
+  const handleOpenReviewModal = (booking, isEditing = false) => {
+    setSelectedBookingForReview(booking)
+    setShowReviewModal(true)
+    
+    if (isEditing) {
+      // Find the existing review for this booking
+      const existingReview = userReviews.find(review => review.booking?.id === booking.id)
+      if (existingReview) {
+        setReviewText(existingReview.comment || "")
+        setReviewRating(existingReview.rating || 5)
+        setExistingReviewId(existingReview.id)
+        setIsEditingReview(true)
+      }
+    } else {
+      // New review
+      setReviewText("")
+      setReviewRating(5)
+      setExistingReviewId(null)
+      setIsEditingReview(false)
+    }
+  }
+
+  const handleCloseReviewModal = () => {
+    setShowReviewModal(false)
+    setSelectedBookingForReview(null)
+    setReviewText("")
+    setReviewRating(5)
+    setIsEditingReview(false)
+    setExistingReviewId(null)
+  }
+
+  const handleSubmitReview = async () => {
+    if (!selectedBookingForReview || !user?.id) return
+    
+    if (reviewRating < 1 || reviewRating > 5) {
+      toast.error("Please select a rating between 1 and 5 stars")
+      return
+    }
+    
+    if (!reviewText.trim()) {
+      toast.error("Please provide some feedback in your review")
+      return
+    }
+    
+    setIsSubmittingReview(true)
+    
+    try {
+      const reviewData = {
+        bookingId: selectedBookingForReview.id,
+        rating: reviewRating,
+        comment: reviewText,
+        customerId: user.id,
+        providerServiceId: selectedBookingForReview.providerService.id
+      }
+      
+      if (isEditingReview && existingReviewId) {
+        // Update existing review
+        await updateReview(existingReviewId, reviewData)
+        
+        // Update the reviews in state
+        const updatedReviews = userReviews.map(review => 
+          review.id === existingReviewId 
+            ? { ...review, rating: reviewRating, comment: reviewText } 
+            : review
+        )
+        setUserReviews(updatedReviews)
+        
+        toast.success("Review updated successfully")
+      } else {
+        // Create new review
+        console.log("Submitting review:", reviewData)
+        const newReview = await createReview(reviewData)
+        
+        // Add the new review to the user's reviews
+        setUserReviews([...userReviews, newReview])
+        
+        // Update the local state to indicate this booking has been reviewed
+        const updatedBookings = bookings.map(booking => 
+          booking.id === selectedBookingForReview.id 
+            ? { ...booking, isReviewed: true } 
+            : booking
+        )
+        
+        setBookings(updatedBookings)
+        toast.success("Review submitted successfully")
+      }
+      
+      handleCloseReviewModal()
+    } catch (error) {
+      console.error("Error submitting review:", error)
+      
+      // Check if the error is because the booking was already reviewed
+      if (error.response?.data?.includes("already exists for this booking")) {
+        toast.error("You have already reviewed this booking")
+      } else if (error.response?.data?.includes("hasn't been completed")) {
+        toast.error("You can only review completed services")
+      } else {
+        toast.error("Failed to submit review. Please try again.")
+      }
+    } finally {
+      setIsSubmittingReview(false)
+    }
+  }
+
+  const handleDeleteReview = async (booking) => {
+    // Find the review for this booking
+    const reviewToDelete = userReviews.find(review => review.booking?.id === booking.id)
+    
+    if (!reviewToDelete) {
+      toast.error("Review not found")
+      return
+    }
+    
+    if (!window.confirm("Are you sure you want to delete this review?")) {
+      return
+    }
+    
+    setIsDeletingReview(true)
+    
+    try {
+      await deleteReview(reviewToDelete.id, user.id)
+      
+      // Remove the review from state
+      setUserReviews(userReviews.filter(review => review.id !== reviewToDelete.id))
+      
+      // Update booking state
+      const updatedBookings = bookings.map(b => 
+        b.id === booking.id 
+          ? { ...b, isReviewed: false } 
+          : b
+      )
+      setBookings(updatedBookings)
+      
+      toast.success("Review deleted successfully")
+    } catch (error) {
+      console.error("Error deleting review:", error)
+      toast.error("Failed to delete review")
+    } finally {
+      setIsDeletingReview(false)
+    }
+  }
+
+  const getBookingReviewStatus = (booking) => {
+    if (booking.status !== "COMPLETED") return null
+    
+    // Check if the booking has been marked as reviewed during the initial fetch
+    if (booking.isReviewed) return true
+    
+    // Check if the booking has a review in the userReviews array
+    const review = userReviews.find(review => review.booking?.id === booking.id)
+    return review
   }
 
   const sortedBookings = useMemo(() => {
@@ -340,6 +544,44 @@ export default function CustomerBookings() {
                     )}
                   </button>
                 )}
+                
+                {booking?.status === "COMPLETED" && (
+                  <div>
+                    {!booking.isReviewed && !getBookingReviewStatus(booking) ? (
+                      <button
+                        onClick={() => handleOpenReviewModal(booking, false)}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                      >
+                        <Star size={14} className="mr-1.5" />
+                        Leave Review
+                      </button>
+                    ) : (
+                      <div className="flex flex-col space-y-2">
+                        <div className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-700">
+                          <CheckCircle size={14} className="mr-1.5" />
+                          Reviewed
+                        </div>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => handleOpenReviewModal(booking, true)}
+                            className="inline-flex items-center p-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            title="Edit review"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReview(booking)}
+                            className="inline-flex items-center p-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            title="Delete review"
+                            disabled={isDeletingReview}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -435,6 +677,116 @@ export default function CustomerBookings() {
           </div>
         </div>
       </div>
+      
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="review-modal" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleCloseReviewModal}></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        {isEditingReview ? "Edit Your Review" : "Write a Review"}
+                      </h3>
+                      <button
+                        type="button"
+                        className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                        onClick={handleCloseReviewModal}
+                      >
+                        <span className="sr-only">Close</span>
+                        <X className="h-6 w-6" aria-hidden="true" />
+                      </button>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Service: {selectedBookingForReview?.providerService?.serviceName}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Booking ID: #{selectedBookingForReview?.id}
+                      </p>
+                      
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Your Rating
+                        </label>
+                        <div className="flex items-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              className={`${
+                                reviewRating >= star
+                                  ? "text-yellow-400 hover:text-yellow-500"
+                                  : "text-gray-300 hover:text-yellow-400"
+                              } p-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500`}
+                              onClick={() => setReviewRating(star)}
+                            >
+                              <Star
+                                className="h-6 w-6"
+                                fill={reviewRating >= star ? "currentColor" : "none"}
+                                aria-hidden="true"
+                              />
+                              <span className="sr-only">{star} stars</span>
+                            </button>
+                          ))}
+                          <span className="ml-2 text-gray-600">{reviewRating}/5</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <label htmlFor="review-text" className="block text-sm font-medium text-gray-700 mb-2">
+                          Your Review
+                        </label>
+                        <textarea
+                          id="review-text"
+                          className="shadow-sm focus:ring-purple-500 focus:border-purple-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                          placeholder="Share your experience with this service..."
+                          rows={4}
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                        ></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview}
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      {isEditingReview ? "Updating..." : "Submitting..."}
+                    </>
+                  ) : (
+                    isEditingReview ? "Update Review" : "Submit Review"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleCloseReviewModal}
+                  disabled={isSubmittingReview}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </ErrorBoundary>
   )
 }
