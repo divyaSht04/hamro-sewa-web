@@ -65,13 +65,25 @@ export default function ServiceDetailsPage() {
         // Fetch reviews for this service
         try {
           const serviceReviews = await getServiceReviews(id)
-          setReviews(serviceReviews || [])
+          // Process reviews to ensure customer data is available
+          const processedReviews = serviceReviews.map(review => {
+            // Extract customer name from customer object or use customerId
+            const customerName = review.customer?.name || review.customer?.username || 
+                                 (review.customerId ? `Customer ${review.customerId}` : "Customer")
+            
+            return {
+              ...review,
+              customerName: customerName,
+              // Set a default value for customerImage if none exists
+              customerImage: review.customer?.profileImage || null
+            }
+          })
+          setReviews(processedReviews || [])
+          console.log("Processed reviews:", processedReviews)
         } catch (reviewErr) {
           console.error("Error fetching reviews:", reviewErr)
           setReviews([])
         }
-
-        // Fetch average rating
         try {
           const rating = await getServiceAverageRating(id)
           setAverageRating(typeof rating === "number" ? rating : null)
@@ -79,9 +91,6 @@ export default function ServiceDetailsPage() {
           console.error("Error fetching rating:", ratingErr)
           setAverageRating(null)
         }
-
-        // Check if user can leave a review
-        // User can leave a review if they have completed bookings for this service
         if (user) {
           await fetchUserCompletedBookings(id, user.id)
         }
@@ -96,8 +105,6 @@ export default function ServiceDetailsPage() {
 
     fetchServiceData()
   }, [id, user])
-
-  // Fetch user's completed bookings for this service
   const fetchUserCompletedBookings = async (serviceId, userId) => {
     try {
       // Get user's bookings for this service
@@ -137,7 +144,12 @@ export default function ServiceDetailsPage() {
 
   // Handle submitting a real review
   const handleSubmitReview = async () => {
-    if (userReview.trim() === "" || !user || !selectedBookingId) return
+    if (userReview.trim() === "" || !user) return
+    // Only check for selectedBookingId if creating a new review, not when editing
+    if (!isEditingReview && !selectedBookingId) {
+      toast.error("Please select a booking to review");
+      return;
+    }
 
     setReviewLoading(true)
 
@@ -150,16 +162,27 @@ export default function ServiceDetailsPage() {
         bookingId: selectedBookingId
       }
 
+      console.log("Submitting review data:", reviewData, "isEditing:", isEditingReview, "reviewId:", reviewToEditId);
+
       let updatedReview;
       
       if (isEditingReview && reviewToEditId) {
         // Update existing review
         updatedReview = await updateReview(reviewToEditId, reviewData);
+        console.log("Review updated successfully:", updatedReview);
         
         // Update reviews list with the edited review
-        setReviews(reviews.map(review => 
-          review.id === reviewToEditId ? updatedReview : review
-        ));
+        setReviews(reviews.map(review => {
+          if (review.id === reviewToEditId) {
+            // Preserve the customer name and image in the updated review
+            return {
+              ...updatedReview,
+              customerName: review.customerName || "Customer",
+              customerImage: review.customerImage
+            };
+          }
+          return review;
+        }));
         
         toast.success("Review updated successfully");
       } else {
@@ -209,12 +232,28 @@ export default function ServiceDetailsPage() {
   const handleEditReview = (review) => {
     if (!user) return
     
-    setIsEditingReview(true)
-    setReviewToEditId(review.id)
-    setUserRating(review.rating)
-    setUserReview(review.comment)
-    setSelectedBookingId(review.booking?.id)
-    setShowReviewForm(true)
+    console.log("Editing review:", review);
+    
+    // Make sure we have the basics needed to edit
+    if (!review || !review.id) {
+      toast.error("Cannot edit this review. Missing required data.");
+      return;
+    }
+    
+    setIsEditingReview(true);
+    setReviewToEditId(review.id);
+    setUserRating(review.rating);
+    setUserReview(review.comment);
+    
+    // Handle different ways the booking ID might be stored
+    if (review.booking && review.booking.id) {
+      setSelectedBookingId(review.booking.id);
+    } else if (review.bookingId) {
+      setSelectedBookingId(review.bookingId);
+    }
+    
+    // Always show the form after setting up the data
+    setShowReviewForm(true);
   }
   
   // Delete a review
@@ -816,7 +855,7 @@ export default function ServiceDetailsPage() {
 
                   {/* Add review form */}
                   {user ? (
-                    canReview ? (
+                    (canReview || isEditingReview) ? (
                       <div className="mt-8">
                         {showReviewForm ? (
                           <div className="bg-gradient-to-br from-gray-50 to-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
@@ -1125,7 +1164,6 @@ export default function ServiceDetailsPage() {
               )}
             </div>
 
-            {/* Provider info card */}
             {provider && (
               <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
                 <h3 className="text-lg font-medium mb-4">About the Provider</h3>

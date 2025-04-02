@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8084';
 
-// Helper function to get auth headers for JSON requests
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -11,10 +10,7 @@ const getAuthHeaders = () => {
   };
 };
 
-/**
- * Get all services (for admin)
- * @returns {Promise<Array>} List of all services
- */
+
 export const getAllServices = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/provider-services/all`, {
@@ -44,12 +40,6 @@ export const getServicesByStatus = async (status) => {
   }
 };
 
-/**
- * Approve a service
- * @param {number} serviceId - ID of the service to approve
- * @param {string} feedback - Optional feedback from admin
- * @returns {Promise<Object>} The updated service
- */
 export const approveService = async (serviceId, feedback = '') => {
   try {
     const response = await axios.put(
@@ -67,12 +57,6 @@ export const approveService = async (serviceId, feedback = '') => {
   }
 };
 
-/**
- * Reject a service
- * @param {number} serviceId - ID of the service to reject
- * @param {string} feedback - Feedback explaining why the service was rejected
- * @returns {Promise<Object>} The updated service
- */
 export const rejectService = async (serviceId, feedback) => {
   try {
     if (!feedback || feedback.trim() === '') {
