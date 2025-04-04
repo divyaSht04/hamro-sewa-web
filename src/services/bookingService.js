@@ -107,15 +107,22 @@ export const getProviderBookings = async (providerId) => {
 };
 
 // Update booking status
-export const updateBookingStatus = async (bookingId, status) => {
+export const updateBookingStatus = async (bookingId, status, comment) => {
   try {
+    console.log(`Updating booking ${bookingId} to status ${status}`);
     const response = await axios.put(
-      `${API_BASE_URL}/bookings/${bookingId}/status?status=${status}`,
-      {},
+      `${API_BASE_URL}/bookings/${bookingId}/status`,
+      null,
       {
+        params: {
+          status: status, 
+          comment: comment || "",
+          preserveLoyalty: false
+        },
         headers: getAuthHeaders()
       }
     );
+    console.log('Status update response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating booking status:', error.response?.data || error.message);
@@ -123,14 +130,22 @@ export const updateBookingStatus = async (bookingId, status) => {
   }
 };
 
-export const cancelBooking = async (bookingId) => {
+export const cancelBooking = async (bookingId, comment, isLoyaltyDiscountRejection = false) => {
   try {
-    const response = await axios.delete(
-      `${API_BASE_URL}/bookings/${bookingId}`,
+    console.log(`Cancelling booking ${bookingId} with preserveLoyalty=${isLoyaltyDiscountRejection}`);
+    const response = await axios.put(
+      `${API_BASE_URL}/bookings/${bookingId}/status`,
+      null,
       {
+        params: {
+          status: 'CANCELLED',
+          comment: comment || "",
+          preserveLoyalty: isLoyaltyDiscountRejection
+        },
         headers: getAuthHeaders()
       }
     );
+    console.log('Cancellation response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error cancelling booking:', error.response?.data || error.message);

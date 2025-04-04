@@ -29,8 +29,10 @@ import {
   deleteReview,
 } from "../../services/reviewService"
 import { createBooking, getServiceBookings } from "../../services/bookingService"
+import { getLoyaltyProgress } from "../../services/loyaltyService"
 import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
+import LoyaltyStatusCard from "../../components/LoyaltyStatusCard"
 
 export default function ServiceDetailsPage() {
   const { id } = useParams()
@@ -62,10 +64,68 @@ export default function ServiceDetailsPage() {
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
   const [bookingNotes, setBookingNotes] = useState("")
+  
+  // Booking related state
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState(null)
-  const [showBookingForm, setShowBookingForm] = useState(false)
+  const [showBookingForm, setShowBookingForm] = useState(true) // Changed to true to always show the booking form
+  
+  // Loyalty program state
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false)
+  const [isEligibleForDiscount, setIsEligibleForDiscount] = useState(false)
+  const [discountPercentage, setDiscountPercentage] = useState(20) // Default 20%
+  const [loyaltyData, setLoyaltyData] = useState(null)
+
+  useEffect(() => {
+    // Check for loyalty discount eligibility when user is logged in and service provider is loaded
+    const checkLoyaltyStatus = async () => {
+      if (user && provider && provider.id) {
+        try {
+          setLoyaltyLoading(true);
+          // Reset eligibility before checking
+          setIsEligibleForDiscount(false);
+          setDiscountPercentage(0);
+          
+          const data = await getLoyaltyProgress(user.id, provider.id);
+          setLoyaltyData(data);
+          console.log('Service Details - Loyalty data received:', data);
+          
+          // Check for discountEligible flag first
+          if (data.discountEligible === true) {
+            setIsEligibleForDiscount(true);
+            setDiscountPercentage(data.discountPercentage || 20);
+            console.log(`Loyalty discount eligible via discountEligible flag: ${data.discountPercentage || 20}% will be applied`);
+          }
+          // Then check eligibleForDiscount flag
+          else if (data.eligibleForDiscount === true) {
+            setIsEligibleForDiscount(true);
+            setDiscountPercentage(data.discountPercentage || 20);
+            console.log(`Loyalty discount eligible via flag: ${data.discountPercentage || 20}% will be applied`);
+          }
+          // Finally check completed bookings count as a fallback
+          else if (data.completedBookings >= 4) {
+            setIsEligibleForDiscount(true);
+            setDiscountPercentage(data.discountPercentage || 20);
+            console.log(`Loyalty discount eligible via count: ${data.discountPercentage || 20}% will be applied`);
+          } else {
+            console.log(`Not eligible for discount. Completed bookings: ${data.completedBookings}`);
+          }
+        } catch (err) {
+          console.error("Error checking loyalty status:", err);
+          // Reset in case of error
+          setIsEligibleForDiscount(false);
+          setDiscountPercentage(0);
+        } finally {
+          setLoyaltyLoading(false);
+        }
+      }
+    };
+
+    if (provider) {
+      checkLoyaltyStatus();
+    }
+  }, [user, provider]);
 
   useEffect(() => {
     const fetchServiceData = async () => {
@@ -321,37 +381,40 @@ export default function ServiceDetailsPage() {
 
     setBookingLoading(true)
     setBookingError(null)
-
     try {
+      setBookingLoading(true)
+      setBookingError(null)
+
+      // Combine date and time
+      const bookingDateTime = new Date(`${bookingDate}T${bookingTime}`)
+
+      // Create booking data - we don't need to manually set discount fields
+      // as the backend will automatically check and apply loyalty discounts
       const bookingData = {
         customerId: user.id,
-        providerServiceId: Number.parseInt(id),
-        bookingDate: `${bookingDate}T${bookingTime}:00`, // Format as ISO date time
-        notes: bookingNotes,
-        // Status will be set to PENDING by default in the backend
+        providerServiceId: parseInt(id),
+        bookingDateTime: bookingDateTime.toISOString(),
+        bookingNotes: bookingNotes
       }
 
-      console.log("Submitting booking data:", bookingData)
+      await createBooking(bookingData)
 
-      // Submit booking to backend
-      const response = await createBooking(bookingData)
-      console.log("Booking created successfully:", response)
+      // If a discount was applied, show a special success message
+      if (isEligibleForDiscount) {
+        toast.success("Booking created with 20% loyalty discount applied!")
+      } else {
+        toast.success("Booking created successfully!")
+      }
 
-      // Show success message
       setBookingSuccess(true)
 
-      // Reset form fields
-      setBookingDate("")
-      setBookingTime("")
-      setBookingNotes("")
-
-      // Redirect to bookings page after a short delay
+      // Redirect to bookings page after 2 seconds
       setTimeout(() => {
-        navigate("/customer/bookings")
+        navigate(`/customer/bookings`)
       }, 2000)
-    } catch (err) {
-      console.error("Error booking service:", err)
-      setBookingError(err.response?.data || "Failed to book service. Please try again.")
+    } catch (error) {
+      console.error("Booking error:", error)
+      setBookingError(error.response?.data || "Failed to create booking. Please try again.")
     } finally {
       setBookingLoading(false)
     }
@@ -970,16 +1033,28 @@ export default function ServiceDetailsPage() {
 
               {user ? (
                 service.status === "APPROVED" ? (
-                  <button
-                    onClick={() => {
-                      console.log("Navigating to booking page with ID:", service.id)
-                      navigate(`/booking/${service.id}`)
-                    }}
-                    className="w-full py-3.5 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-                  >
-                    <Calendar size={18} />
-                    Book Now
-                  </button>
+                  <>
+                    {/* Show loyalty status card when user is logged in */}
+                    {provider && (
+                      <div className="mb-4">
+                        <LoyaltyStatusCard 
+                          customerId={user.id} 
+                          serviceProviderId={provider.id} 
+                          providerName={provider.companyName || provider.fullName || provider.username}
+                        />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        console.log("Navigating to booking page with ID:", service.id);
+                        navigate(`/booking/${service.id}`);
+                      }}
+                      className="w-full py-3.5 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                    >
+                      <Calendar size={18} />
+                      Book Now
+                    </button>
+                  </>
                 ) : (
                   <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
                     <p className="text-yellow-800 text-sm flex items-start">
@@ -1002,121 +1077,7 @@ export default function ServiceDetailsPage() {
                 </div>
               )}
 
-              {/* Booking form */}
-              {showBookingForm && (
-                <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
-                  <h3 className="text-xl font-semibold mb-4">Book this Service</h3>
-
-                  {bookingSuccess ? (
-                    <div className="bg-green-50 p-4 rounded-md mb-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="text-green-500 mt-0.5 mr-2" size={20} />
-                        <div>
-                          <h4 className="font-semibold text-green-800">Booking Successful!</h4>
-                          <p className="text-green-700 mt-1">
-                            Your booking request has been submitted successfully. Redirecting to your bookings page...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleBookService}>
-                      <div className="space-y-4">
-                        {bookingError && (
-                          <div className="bg-red-50 p-4 rounded-md mb-4">
-                            <div className="flex">
-                              <XCircle className="text-red-500 mr-2" size={20} />
-                              <p className="text-red-700">{bookingError}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        <div>
-                          <label htmlFor="bookingDate" className="block text-sm font-medium text-gray-700 mb-1">
-                            Date
-                          </label>
-                          <input
-                            type="date"
-                            id="bookingDate"
-                            value={bookingDate}
-                            onChange={(e) => setBookingDate(e.target.value)}
-                            min={new Date().toISOString().split("T")[0]}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="bookingTime" className="block text-sm font-medium text-gray-700 mb-1">
-                            Time
-                          </label>
-                          <input
-                            type="time"
-                            id="bookingTime"
-                            value={bookingTime}
-                            onChange={(e) => setBookingTime(e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Choose a time between the service provider's working hours.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label htmlFor="bookingNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                            Notes (Optional)
-                          </label>
-                          <textarea
-                            id="bookingNotes"
-                            value={bookingNotes}
-                            onChange={(e) => setBookingNotes(e.target.value)}
-                            rows={3}
-                            placeholder="Add any specific details or requirements for your booking"
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          />
-                        </div>
-
-                        <div className="bg-blue-50 p-4 rounded-md">
-                          <div className="flex items-start">
-                            <AlertTriangle className="text-blue-500 mt-0.5 mr-2" size={20} />
-                            <div className="text-sm text-blue-700">
-                              <p>
-                                Your booking will start in the <strong>PENDING</strong> status. The service provider
-                                needs to confirm it before it's finalized.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end pt-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowBookingForm(false)}
-                            className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={bookingLoading}
-                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {bookingLoading ? (
-                              <span className="flex items-center">
-                                <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                                Processing...
-                              </span>
-                            ) : (
-                              "Book Now"
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
+              {/* Removed inline booking form - now redirecting to dedicated booking page */}
             </div>
           </div>
         </div>

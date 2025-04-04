@@ -421,12 +421,29 @@ export default function CustomerBookings() {
                     </div>
                   )}
 
-                  {booking?.service?.price && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="font-medium text-gray-900">Rs. {booking.service.price.toFixed(2)}</span>
-                      {booking.service.priceUnit && <span className="ml-1">per {booking.service.priceUnit}</span>}
-                    </div>
-                  )}
+                  {/* Price display with discount information if applicable */}
+                  <div className="flex items-center text-sm text-gray-500">
+                    {booking?.discountApplied ? (
+                      <>
+                        <span className="font-medium line-through text-gray-400 mr-2">
+                          Rs. {booking.originalPrice?.toFixed(2) || booking?.providerService?.price?.toFixed(2)}
+                        </span>
+                        <span className="font-medium text-green-600">
+                          Rs. {booking.discountedPrice?.toFixed(2) || (booking.providerService?.price * 0.8)?.toFixed(2)}
+                        </span>
+                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          {booking.discountPercentage ? `${booking.discountPercentage * 100}%` : '20%'} off
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-medium text-gray-900">
+                        Rs. {booking.originalPrice?.toFixed(2) || booking?.providerService?.price?.toFixed(2)}
+                      </span>
+                    )}
+                    {booking?.providerService?.priceUnit && 
+                      <span className="ml-1">per {booking.providerService.priceUnit}</span>
+                    }
+                  </div>
                 </div>
 
                 {booking?.bookingNotes && (

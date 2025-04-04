@@ -14,10 +14,15 @@ import {
   User,
   ChevronRight,
   Shield,
+  RefreshCw,
+  XCircle,
+  CheckCircle
 } from "lucide-react"
 import { getServiceById } from "../../services/providerServiceApi"
 import { createBooking } from "../../services/bookingService"
 import { useAuth } from "../../auth/AuthContext"
+import * as loyaltyService from "../../services/loyaltyService"
+import LoyaltyStatusCard from "../../components/LoyaltyStatusCard"
 
 export default function BookingPage() {
   const { id } = useParams()
@@ -37,6 +42,12 @@ export default function BookingPage() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState(null)
+  
+  // Loyalty-related state
+  const [loyaltyStatus, setLoyaltyStatus] = useState(null)
+  const [isEligibleForDiscount, setIsEligibleForDiscount] = useState(false)
+  const [discountPercentage, setDiscountPercentage] = useState(0)
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false)
 
   // Form validation
   const [formErrors, setFormErrors] = useState({})
@@ -45,7 +56,56 @@ export default function BookingPage() {
     time: false,
   })
 
+  // Check for loyalty discount eligibility
+  const checkLoyaltyStatus = async () => {
+    if (!user || !provider) {
+      console.log("Missing user or provider data for loyalty check");
+      return;
+    }
+    
+    try {
+      setLoyaltyLoading(true);
+      // Reset eligibility before checking - this is important to avoid stale state
+      setIsEligibleForDiscount(false);
+      setDiscountPercentage(0);
+      
+      console.log(`Checking loyalty for user ${user.id} with provider ${provider.id}`);
+      const loyaltyData = await loyaltyService.getLoyaltyProgress(user.id, provider.id);
+      setLoyaltyStatus(loyaltyData);
+      
+      console.log('Loyalty data received:', loyaltyData);
+      
+      // Enhanced check for discount eligibility using multiple conditions
+      // This ensures consistent behavior across the application
+      const isEligible = (
+        // Check for both flag names for backward compatibility
+        loyaltyData.discountEligible === true || 
+        loyaltyData.eligibleForDiscount === true || 
+        // Fallback check based on completed bookings count
+        (loyaltyData.completedBookings !== undefined && loyaltyData.completedBookings >= 4)
+      );
+      
+      if (isEligible) {
+        setIsEligibleForDiscount(true);
+        setDiscountPercentage(loyaltyData.discountPercentage || 20);
+        console.log(`Loyalty discount eligible: ${loyaltyData.discountPercentage || 20}% will be applied`);
+      } else {
+        console.log("User is not eligible for a discount - completed bookings:", loyaltyData.completedBookings);
+      }
+    } catch (error) {
+      console.error("Error checking loyalty status:", error);
+      setIsEligibleForDiscount(false);
+      setDiscountPercentage(0);
+    } finally {
+      setLoyaltyLoading(false);
+    }
+  };
+
   useEffect(() => {
+    // Reset loyalty status on component mount
+    setIsEligibleForDiscount(false);
+    setDiscountPercentage(0);
+    
     // Redirect if not logged in
     if (!user) {
       navigate("/login", { state: { from: `/booking/${id}` } })
@@ -71,12 +131,20 @@ export default function BookingPage() {
         if (serviceData.serviceProvider) {
           setProvider(serviceData.serviceProvider)
         }
-
+        
         setLoading(false)
       } catch (err) {
         console.error("Error fetching service details:", err)
         setError("Unable to load service details. The service might not exist.")
         setLoading(false)
+        return;
+      }
+      
+      // Once we have the provider, check loyalty status
+      // This needs to be outside the try/catch block to ensure it runs even if there are minor errors
+      if (provider) {
+        console.log("Checking loyalty status after service data load");
+        await checkLoyaltyStatus();
       }
     }
 
@@ -165,6 +233,11 @@ export default function BookingPage() {
         providerServiceId: Number.parseInt(id),
         bookingDateTime: `${bookingDate}T${bookingTime}:00`, // Use the correct field name bookingDateTime
         bookingNotes: bookingNotes, // Use the correct field name bookingNotes
+        applyLoyaltyDiscount: isEligibleForDiscount, // Flag to apply loyalty discount if eligible
+        discountPercentage: isEligibleForDiscount ? discountPercentage : 0, // Include the discount percentage
+        finalPrice: isEligibleForDiscount 
+          ? (service.price * (1 - discountPercentage/100))
+          : service.price // Include the calculated final price
       }
       
       console.log("Submitting booking data:", bookingData)
@@ -265,7 +338,15 @@ export default function BookingPage() {
                 <div className="mt-3 flex flex-wrap gap-4">
                   <div className="flex items-center text-gray-700">
                     <DollarSign className="w-5 h-5 text-purple-600 mr-1" />
-                    <span className="font-medium">Rs. {service.price.toFixed(2)}</span>
+                    {isEligibleForDiscount ? (
+                      <>
+                        <span className="font-medium line-through text-gray-400 mr-2">Rs. {service.price.toFixed(2)}</span>
+                        <span className="font-medium text-green-600">Rs. {(service.price * (1 - discountPercentage/100)).toFixed(2)}</span>
+                        <span className="ml-2 text-sm bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{discountPercentage}% off</span>
+                      </>
+                    ) : (
+                      <span className="font-medium">Rs. {service.price.toFixed(2)}</span>
+                    )}
                     {service.priceUnit && <span className="text-sm text-gray-500 ml-1">per {service.priceUnit}</span>}
                   </div>
 
@@ -440,6 +521,41 @@ export default function BookingPage() {
                   </div>
                 </div>
 
+                {/* Summary of booking costs */}
+                <div className="mt-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2">Booking Summary</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-md font-medium text-gray-600">Service Price</span>
+                      {isEligibleForDiscount ? (
+                        <span className="text-lg font-medium text-gray-400 line-through">Rs. {service.price.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-lg font-medium text-gray-900">Rs. {service.price.toFixed(2)}</span>
+                      )}
+                    </div>
+                    
+                    {isEligibleForDiscount && (
+                      <div className="flex justify-between items-center text-green-600">
+                        <span className="text-md font-medium">Loyalty Discount ({discountPercentage}%)</span>
+                        <span className="text-lg font-medium">-Rs. {(service.price * (discountPercentage/100)).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between border-t border-gray-200 pt-4 mt-2">
+                      <span className="text-lg font-semibold text-gray-700">Total Price</span>
+                      {isEligibleForDiscount ? (
+                        <span className="text-2xl font-bold text-green-600">
+                          Rs. {(service.price * (1 - discountPercentage/100)).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-2xl font-bold text-gray-900">
+                          Rs. {service.price.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {bookingError && (
                   <div className="bg-red-50 text-red-800 p-4 rounded-md mb-6 flex items-start border border-red-200">
                     <AlertCircle className="mr-2 flex-shrink-0 mt-0.5" size={18} />
@@ -447,18 +563,22 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                <div className="bg-blue-50 p-5 rounded-lg mb-6 flex items-start border border-blue-100">
-                  <Shield className="text-blue-500 mr-3 flex-shrink-0 mt-0.5" size={20} />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium mb-1">Booking Information</p>
-                    <p className="mb-2">
-                      Your booking will be sent to the service provider for confirmation. You'll be notified once they
-                      accept or reject your booking.
-                    </p>
-                    <p>Payment will be handled directly with the service provider after the service is completed.</p>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                  <div className="flex items-start">
+                    <AlertCircle className="text-blue-500 mt-0.5 mr-2" size={20} />
+                    <div className="text-sm text-gray-700">
+                      <p>
+                        Your booking will start in the <strong>PENDING</strong> status and will require confirmation by
+                        the service provider before it&apos;s finalized.
+                      </p>
+                      {isEligibleForDiscount && (
+                        <p className="mt-2 font-semibold text-green-600">
+                          A {discountPercentage}% loyalty discount will be automatically applied to your booking!
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     type="submit"
@@ -510,9 +630,23 @@ export default function BookingPage() {
 
         {/* Service details summary */}
         <div className="mt-8 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-medium mb-4 text-gray-900">Service Details</h3>
-          <div className="prose max-w-none text-gray-600">
-            <p>{service.description}</p>
+          <h2 className="text-xl md:text-2xl font-bold mb-4 text-gray-900">Service Details</h2>
+          
+          {/* Loyalty Status Card */}
+          {user && provider && (
+            <div className="mb-6">
+              <LoyaltyStatusCard 
+                customerId={user.id} 
+                serviceProviderId={provider.id}
+                onStatusUpdate={checkLoyaltyStatus}
+              />
+            </div>
+          )}
+          
+          <div className="space-y-4 mb-8">
+            <div className="prose max-w-none text-gray-600">
+              <p>{service.description}</p>
+            </div>
           </div>
         </div>
       </div>
