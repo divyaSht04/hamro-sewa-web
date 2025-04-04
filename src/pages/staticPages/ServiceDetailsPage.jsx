@@ -2,9 +2,32 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
-import {ArrowLeft,Star,Clock,DollarSign,Calendar,MapPin,Phone, Mail, Globe,Check, AlertCircle, FileText, Download, Info, ChevronRight, Heart, Share2,MessageCircle,Edit2,Trash2,X,} from "lucide-react"
-import { getServiceById, getServiceImageUrl, getServicePdfUrl } from "../../services/providerServiceApi"
-import { getServiceReviews, getServiceAverageRating, createReview, updateReview, deleteReview } from "../../services/reviewService"
+import {
+  ArrowLeft,
+  Star,
+  Clock,
+  DollarSign,
+  Calendar,
+  MapPin,
+  AlertCircle,
+  Info,
+  ChevronRight,
+  MessageCircle,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react"
+import { getServiceById, getServiceImageUrl } from "../../services/providerServiceApi"
+import {
+  getServiceReviews,
+  getServiceAverageRating,
+  createReview,
+  updateReview,
+  deleteReview,
+} from "../../services/reviewService"
 import { createBooking, getServiceBookings } from "../../services/bookingService"
 import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
@@ -20,9 +43,6 @@ export default function ServiceDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState("overview")
-  const [isFavorite, setIsFavorite] = useState(false)
-
-  // Review-related state
   const [reviews, setReviews] = useState([])
   const [averageRating, setAverageRating] = useState(null)
   const [userReview, setUserReview] = useState("")
@@ -66,16 +86,18 @@ export default function ServiceDetailsPage() {
         try {
           const serviceReviews = await getServiceReviews(id)
           // Process reviews to ensure customer data is available
-          const processedReviews = serviceReviews.map(review => {
+          const processedReviews = serviceReviews.map((review) => {
             // Extract customer name from customer object or use customerId
-            const customerName = review.customer?.name || review.customer?.username || 
-                                 (review.customerId ? `Customer ${review.customerId}` : "Customer")
-            
+            const customerName =
+              review.customer?.name ||
+              review.customer?.username ||
+              (review.customerId ? `Customer ${review.customerId}` : "Customer")
+
             return {
               ...review,
               customerName: customerName,
               // Set a default value for customerImage if none exists
-              customerImage: review.customer?.profileImage || null
+              customerImage: review.customer?.profileImage || null,
             }
           })
           setReviews(processedReviews || [])
@@ -112,27 +134,23 @@ export default function ServiceDetailsPage() {
 
       // Filter for completed bookings by this user
       const userCompletedBookings = bookings.filter(
-        booking => booking.customerId === userId && booking.status === "COMPLETED"
+        (booking) => booking.customerId === userId && booking.status === "COMPLETED",
       )
-      
+
       setCompletedBookings(userCompletedBookings)
-      
+
       // Check if any of these bookings haven't been reviewed yet
       const reviewedBookingIds = reviews
-        .filter(review => review.customerId === userId)
-        .map(review => review.bookingId)
-      
-      const hasUnreviewedBooking = userCompletedBookings.some(
-        booking => !reviewedBookingIds.includes(booking.id)
-      )
-      
+        .filter((review) => review.customerId === userId)
+        .map((review) => review.bookingId)
+
+      const hasUnreviewedBooking = userCompletedBookings.some((booking) => !reviewedBookingIds.includes(booking.id))
+
       setCanReview(hasUnreviewedBooking)
-      
+
       // Set the first unreviewed booking as the selected one
       if (hasUnreviewedBooking) {
-        const firstUnreviewedBooking = userCompletedBookings.find(
-          booking => !reviewedBookingIds.includes(booking.id)
-        )
+        const firstUnreviewedBooking = userCompletedBookings.find((booking) => !reviewedBookingIds.includes(booking.id))
         setSelectedBookingId(firstUnreviewedBooking?.id)
       }
     } catch (err) {
@@ -147,8 +165,8 @@ export default function ServiceDetailsPage() {
     if (userReview.trim() === "" || !user) return
     // Only check for selectedBookingId if creating a new review, not when editing
     if (!isEditingReview && !selectedBookingId) {
-      toast.error("Please select a booking to review");
-      return;
+      toast.error("Please select a booking to review")
+      return
     }
 
     setReviewLoading(true)
@@ -159,40 +177,42 @@ export default function ServiceDetailsPage() {
         comment: userReview,
         customerId: user.id,
         providerServiceId: Number.parseInt(id),
-        bookingId: selectedBookingId
+        bookingId: selectedBookingId,
       }
 
-      console.log("Submitting review data:", reviewData, "isEditing:", isEditingReview, "reviewId:", reviewToEditId);
+      console.log("Submitting review data:", reviewData, "isEditing:", isEditingReview, "reviewId:", reviewToEditId)
 
-      let updatedReview;
-      
+      let updatedReview
+
       if (isEditingReview && reviewToEditId) {
         // Update existing review
-        updatedReview = await updateReview(reviewToEditId, reviewData);
-        console.log("Review updated successfully:", updatedReview);
-        
+        updatedReview = await updateReview(reviewToEditId, reviewData)
+        console.log("Review updated successfully:", updatedReview)
+
         // Update reviews list with the edited review
-        setReviews(reviews.map(review => {
-          if (review.id === reviewToEditId) {
-            // Preserve the customer name and image in the updated review
-            return {
-              ...updatedReview,
-              customerName: review.customerName || "Customer",
-              customerImage: review.customerImage
-            };
-          }
-          return review;
-        }));
-        
-        toast.success("Review updated successfully");
+        setReviews(
+          reviews.map((review) => {
+            if (review.id === reviewToEditId) {
+              // Preserve the customer name and image in the updated review
+              return {
+                ...updatedReview,
+                customerName: review.customerName || "Customer",
+                customerImage: review.customerImage,
+              }
+            }
+            return review
+          }),
+        )
+
+        toast.success("Review updated successfully")
       } else {
         // Submit review to backend
         updatedReview = await createReview(reviewData)
 
         // Update reviews list with the new review
         setReviews([updatedReview, ...reviews])
-        
-        toast.success("Review submitted successfully");
+
+        toast.success("Review submitted successfully")
       }
 
       // Update average rating
@@ -201,9 +221,9 @@ export default function ServiceDetailsPage() {
 
       // Update completed bookings list if it was a new review
       if (!isEditingReview) {
-        const updatedBookings = completedBookings.filter(booking => booking.id !== selectedBookingId)
+        const updatedBookings = completedBookings.filter((booking) => booking.id !== selectedBookingId)
         setCompletedBookings(updatedBookings)
-        
+
         // Check if user has more bookings to review
         if (updatedBookings.length > 0) {
           setSelectedBookingId(updatedBookings[0].id)
@@ -227,60 +247,60 @@ export default function ServiceDetailsPage() {
       setReviewLoading(false)
     }
   }
-  
+
   // Edit an existing review
   const handleEditReview = (review) => {
     if (!user) return
-    
-    console.log("Editing review:", review);
-    
+
+    console.log("Editing review:", review)
+
     // Make sure we have the basics needed to edit
     if (!review || !review.id) {
-      toast.error("Cannot edit this review. Missing required data.");
-      return;
+      toast.error("Cannot edit this review. Missing required data.")
+      return
     }
-    
-    setIsEditingReview(true);
-    setReviewToEditId(review.id);
-    setUserRating(review.rating);
-    setUserReview(review.comment);
-    
+
+    setIsEditingReview(true)
+    setReviewToEditId(review.id)
+    setUserRating(review.rating)
+    setUserReview(review.comment)
+
     // Handle different ways the booking ID might be stored
     if (review.booking && review.booking.id) {
-      setSelectedBookingId(review.booking.id);
+      setSelectedBookingId(review.booking.id)
     } else if (review.bookingId) {
-      setSelectedBookingId(review.bookingId);
+      setSelectedBookingId(review.bookingId)
     }
-    
+
     // Always show the form after setting up the data
-    setShowReviewForm(true);
+    setShowReviewForm(true)
   }
-  
+
   // Delete a review
   const handleDeleteReview = async (reviewId) => {
     if (!user || !reviewId) return
-    
+
     if (!window.confirm("Are you sure you want to delete this review?")) {
       return
     }
-    
+
     setIsDeletingReview(true)
-    
+
     try {
       await deleteReview(reviewId, user.id)
-      
+
       // Remove the review from the list
-      setReviews(reviews.filter(review => review.id !== reviewId))
-      
+      setReviews(reviews.filter((review) => review.id !== reviewId))
+
       // Update average rating
       const updatedRating = await getServiceAverageRating(id)
       setAverageRating(updatedRating)
-      
+
       // Re-check if user can review again
       if (user) {
         await fetchUserCompletedBookings(id, user.id)
       }
-      
+
       toast.success("Review deleted successfully")
     } catch (err) {
       console.error("Error deleting review:", err)
@@ -319,7 +339,7 @@ export default function ServiceDetailsPage() {
 
       // Show success message
       setBookingSuccess(true)
-      
+
       // Reset form fields
       setBookingDate("")
       setBookingTime("")
@@ -349,25 +369,6 @@ export default function ServiceDetailsPage() {
 
   const handleSortByRecent = () => {
     setSortByRecent(!sortByRecent)
-  }
-
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite)
-    // Here you would typically call an API to save the favorite status
-  }
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: service.serviceName,
-        text: `Check out this service: ${service.serviceName}`,
-        url: window.location.href,
-      })
-    } else {
-      // Fallback for browsers that don't support the Web Share API
-      navigator.clipboard.writeText(window.location.href)
-      alert("Link copied to clipboard!")
-    }
   }
 
   const filteredAndSortedReviews = [...reviews]
@@ -461,22 +462,6 @@ export default function ServiceDetailsPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent"></div>
 
         {/* Action buttons */}
-        <div className="absolute top-4 right-4 flex space-x-2">
-          <button
-            onClick={toggleFavorite}
-            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
-            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          >
-            <Heart size={20} className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"} />
-          </button>
-          <button
-            onClick={handleShare}
-            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
-            aria-label="Share service"
-          >
-            <Share2 size={20} className="text-gray-600" />
-          </button>
-        </div>
 
         <div className="absolute bottom-0 left-0 w-full p-6 md:p-10 text-white container mx-auto">
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -490,10 +475,9 @@ export default function ServiceDetailsPage() {
                 <Star
                   key={i}
                   size={16}
-                  className={`${i < Math.round(averageRating || 0)
-                      ? "text-yellow-400 fill-yellow-400"
-                      : "text-gray-400"
-                    }`}
+                  className={`${
+                    i < Math.round(averageRating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-400"
+                  }`}
                 />
               ))}
               {averageRating ? (
@@ -506,12 +490,13 @@ export default function ServiceDetailsPage() {
             </div>
             {service.status && (
               <span
-                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${service.status === "APPROVED"
+                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${
+                  service.status === "APPROVED"
                     ? "bg-green-600"
                     : service.status === "PENDING"
                       ? "bg-yellow-500"
                       : "bg-red-600"
-                  }`}
+                }`}
               >
                 {service.status}
               </span>
@@ -565,33 +550,24 @@ export default function ServiceDetailsPage() {
               <nav className="flex">
                 <button
                   onClick={() => setActiveTab("overview")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "overview"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${
+                    activeTab === "overview"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                    } transition-colors`}
+                  } transition-colors`}
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "reviews"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${
+                    activeTab === "reviews"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                    } transition-colors`}
+                  } transition-colors`}
                 >
                   Reviews ({reviews.length})
                 </button>
-                {service.pdfPath && (
-                  <button
-                    onClick={() => setActiveTab("documents")}
-                    className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "documents"
-                        ? "border-b-2 border-purple-600 text-purple-600"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      } transition-colors`}
-                  >
-                    Documents
-                  </button>
-                )}
               </nav>
             </div>
 
@@ -654,12 +630,13 @@ export default function ServiceDetailsPage() {
                         <Info size={20} className="text-blue-500" />
                         <span className="font-medium">Service Status:</span>
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${service.status === "APPROVED"
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            service.status === "APPROVED"
                               ? "bg-green-100 text-green-800"
                               : service.status === "PENDING"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
-                            }`}
+                          }`}
                         >
                           {service.status}
                         </span>
@@ -693,10 +670,11 @@ export default function ServiceDetailsPage() {
                               <Star
                                 key={i}
                                 size={18}
-                                className={`${i < Math.round(averageRating || 0)
+                                className={`${
+                                  i < Math.round(averageRating || 0)
                                     ? "text-yellow-400 fill-yellow-400"
                                     : "text-gray-300"
-                                  }`}
+                                }`}
                               />
                             ))}
                           </div>
@@ -730,10 +708,11 @@ export default function ServiceDetailsPage() {
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={handleFilterByRating}
-                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${filterRating
+                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                              filterRating
                                 ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
                                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
-                              }`}
+                            }`}
                           >
                             {filterRating ? `${filterRating} Stars` : "All Ratings"}
                           </button>
@@ -776,10 +755,11 @@ export default function ServiceDetailsPage() {
                                         <Star
                                           key={i}
                                           size={14}
-                                          className={`${i < Math.round(review.rating)
+                                          className={`${
+                                            i < Math.round(review.rating)
                                               ? "text-yellow-400 fill-yellow-400"
                                               : "text-gray-300"
-                                            }`}
+                                          }`}
                                         />
                                       ))}
                                       <span className="ml-2 text-sm text-gray-500">
@@ -791,14 +771,14 @@ export default function ServiceDetailsPage() {
                                 {/* Edit/Delete buttons for user's own reviews */}
                                 {user && review.customer?.id === user.id && (
                                   <div className="flex space-x-1">
-                                    <button 
+                                    <button
                                       onClick={() => handleEditReview(review)}
                                       className="p-1 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-50"
                                       title="Edit review"
                                     >
                                       <Edit2 size={16} />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => handleDeleteReview(review.id)}
                                       className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50"
                                       title="Delete review"
@@ -855,7 +835,7 @@ export default function ServiceDetailsPage() {
 
                   {/* Add review form */}
                   {user ? (
-                    (canReview || isEditingReview) ? (
+                    canReview || isEditingReview ? (
                       <div className="mt-8">
                         {showReviewForm ? (
                           <div className="bg-gradient-to-br from-gray-50 to-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
@@ -869,8 +849,9 @@ export default function ServiceDetailsPage() {
                                   <button key={i} type="button" onClick={() => setUserRating(i + 1)} className="p-1">
                                     <Star
                                       size={28}
-                                      className={`${i < userRating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                                        } transition-colors hover:scale-110 transform`}
+                                      className={`${
+                                        i < userRating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+                                      } transition-colors hover:scale-110 transform`}
                                     />
                                   </button>
                                 ))}
@@ -916,8 +897,10 @@ export default function ServiceDetailsPage() {
                                     </svg>
                                     {isEditingReview ? "Updating..." : "Submitting..."}
                                   </span>
+                                ) : isEditingReview ? (
+                                  "Update Review"
                                 ) : (
-                                  isEditingReview ? "Update Review" : "Submit Review"
+                                  "Submit Review"
                                 )}
                               </button>
                               <button
@@ -966,37 +949,9 @@ export default function ServiceDetailsPage() {
                   )}
                 </div>
               )}
-
-              {/* Documents tab */}
-              {activeTab === "documents" && service.pdfPath && (
-                <div className="animate-fadeIn">
-                  <h2 className="text-2xl font-bold mb-6">Service Documents</h2>
-                  <div className="bg-gradient-to-r from-gray-50 to-purple-50 p-6 rounded-lg border border-purple-100 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="bg-red-100 p-3 rounded-lg mr-4">
-                        <FileText size={28} className="text-red-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">Service Information Document</h3>
-                        <p className="text-sm text-gray-500">PDF with detailed service information</p>
-                      </div>
-                    </div>
-                    <a
-                      href={getServicePdfUrl(service.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                    >
-                      <Download size={16} className="mr-2" />
-                      Download
-                    </a>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Right column - Provider info and booking form */}
           <div className="space-y-6">
             {/* Price and booking card */}
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 sticky top-6">
@@ -1013,7 +968,6 @@ export default function ServiceDetailsPage() {
                 </div>
               </div>
 
-              {/* Book now button */}
               {user ? (
                 service.status === "APPROVED" ? (
                   <button
@@ -1052,7 +1006,7 @@ export default function ServiceDetailsPage() {
               {showBookingForm && (
                 <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-xl font-semibold mb-4">Book this Service</h3>
-                  
+
                   {bookingSuccess ? (
                     <div className="bg-green-50 p-4 rounded-md mb-4">
                       <div className="flex items-start">
@@ -1076,7 +1030,7 @@ export default function ServiceDetailsPage() {
                             </div>
                           </div>
                         )}
-                        
+
                         <div>
                           <label htmlFor="bookingDate" className="block text-sm font-medium text-gray-700 mb-1">
                             Date
@@ -1086,12 +1040,12 @@ export default function ServiceDetailsPage() {
                             id="bookingDate"
                             value={bookingDate}
                             onChange={(e) => setBookingDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
+                            min={new Date().toISOString().split("T")[0]}
                             className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                             required
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="bookingTime" className="block text-sm font-medium text-gray-700 mb-1">
                             Time
@@ -1108,7 +1062,7 @@ export default function ServiceDetailsPage() {
                             Choose a time between the service provider's working hours.
                           </p>
                         </div>
-                        
+
                         <div>
                           <label htmlFor="bookingNotes" className="block text-sm font-medium text-gray-700 mb-1">
                             Notes (Optional)
@@ -1122,18 +1076,19 @@ export default function ServiceDetailsPage() {
                             className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                           />
                         </div>
-                        
+
                         <div className="bg-blue-50 p-4 rounded-md">
                           <div className="flex items-start">
                             <AlertTriangle className="text-blue-500 mt-0.5 mr-2" size={20} />
                             <div className="text-sm text-blue-700">
                               <p>
-                                Your booking will start in the <strong>PENDING</strong> status. The service provider needs to confirm it before it's finalized.
+                                Your booking will start in the <strong>PENDING</strong> status. The service provider
+                                needs to confirm it before it's finalized.
                               </p>
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end pt-2">
                           <button
                             type="button"
@@ -1163,61 +1118,6 @@ export default function ServiceDetailsPage() {
                 </div>
               )}
             </div>
-
-            {provider && (
-              <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <h3 className="text-lg font-medium mb-4">About the Provider</h3>
-                <div className="flex items-center mb-4">
-                  <div className="w-14 h-14 overflow-hidden rounded-full bg-gray-200 mr-4 border-2 border-white shadow-sm">
-                    {provider.name?.charAt(0).toUpperCase() || "P"}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{provider.name}</h4>
-                    <p className="text-sm text-gray-500">Service Provider</p>
-                  </div>
-                </div>
-
-                {/* Provider contact */}
-                {service.status === "APPROVED" && (
-                  <div className="space-y-3 mt-4 bg-gray-50 p-4 rounded-lg">
-                    {provider.phone && (
-                      <div className="flex items-center">
-                        <Phone size={16} className="text-gray-500 mr-2" />
-                        <span className="text-sm">{provider.phone}</span>
-                      </div>
-                    )}
-                    {provider.email && (
-                      <div className="flex items-center">
-                        <Mail size={16} className="text-gray-500 mr-2" />
-                        <span className="text-sm">{provider.email}</span>
-                      </div>
-                    )}
-                    {provider.website && (
-                      <div className="flex items-center">
-                        <Globe size={16} className="text-gray-500 mr-2" />
-                        <a
-                          href={provider.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-purple-600 hover:underline"
-                        >
-                          {provider.website.replace(/(^\w+:|^)\/\//, "")}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <Link
-                    to={`/providers/${provider.id}`}
-                    className="inline-flex items-center text-sm text-purple-600 hover:text-purple-800 font-medium"
-                  >
-                    View Provider Profile
-                    <ChevronRight size={16} className="ml-1" />
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

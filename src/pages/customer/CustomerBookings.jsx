@@ -6,7 +6,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  User,
   FileText,
   CheckCircle,
   XCircle,
@@ -14,10 +13,8 @@ import {
   ChevronDown,
   Search,
   Filter,
-  RefreshCw,
   Trash2,
   Star,
-  MessageSquare,
   X,
   Edit2,
 } from "lucide-react"
@@ -25,42 +22,6 @@ import { useAuth } from "../../auth/AuthContext"
 import { getCustomerBookings, cancelBooking, checkBookingReviewStatus } from "../../services/bookingService"
 import { createReview, updateReview, deleteReview, getCustomerReviews } from "../../services/reviewService"
 import toast from "react-hot-toast"
-
-// Error boundary component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Error in component:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="bg-red-50 p-6 rounded-lg text-center">
-          <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-semibold text-red-800 mb-3">Something went wrong!</h2>
-          <p className="text-red-700 mb-4">{this.state.error?.message || 'An error occurred'}</p>
-          <button 
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            onClick={() => this.setState({ hasError: false })}
-          >
-            Try again
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
 
 export default function CustomerBookings() {
   const { user } = useAuth()
@@ -89,7 +50,6 @@ export default function CustomerBookings() {
   }, [user])
 
   useEffect(() => {
-    // Fetch user's reviews when user is available
     if (user?.id) {
       fetchUserReviews()
     }
@@ -110,14 +70,10 @@ export default function CustomerBookings() {
     try {
       setLoading(true)
       setError(null)
-      console.log("Attempting to fetch bookings for user:", user)
       
-      // Ensure user.id is a number
       if (user && user.id) {
         const data = await getCustomerBookings(user.id)
-        console.log("Successfully fetched bookings:", data)
         
-        // For each completed booking, check if it has been reviewed
         if (data && data.length > 0) {
           const updatedBookings = await Promise.all(data.map(async (booking) => {
             if (booking.status === "COMPLETED") {
@@ -156,8 +112,9 @@ export default function CustomerBookings() {
       setCancellingId(bookingId)
       await cancelBooking(bookingId)
 
-      // Update the local state
-      setBookings(bookings.map((booking) => (booking.id === bookingId ? { ...booking, status: "CANCELLED" } : booking)))
+      setBookings(bookings.map((booking) => 
+        booking.id === bookingId ? { ...booking, status: "CANCELLED" } : booking
+      ))
     } catch (err) {
       console.error("Error cancelling booking:", err)
       alert("Failed to cancel booking. Please try again.")
@@ -171,7 +128,6 @@ export default function CustomerBookings() {
     setShowReviewModal(true)
     
     if (isEditing) {
-      // Find the existing review for this booking
       const existingReview = userReviews.find(review => review.booking?.id === booking.id)
       if (existingReview) {
         setReviewText(existingReview.comment || "")
@@ -180,7 +136,6 @@ export default function CustomerBookings() {
         setIsEditingReview(true)
       }
     } else {
-      // New review
       setReviewText("")
       setReviewRating(5)
       setExistingReviewId(null)
@@ -222,33 +177,22 @@ export default function CustomerBookings() {
       }
       
       if (isEditingReview && existingReviewId) {
-        // Update existing review
         await updateReview(existingReviewId, reviewData)
-        
-        // Update the reviews in state
         const updatedReviews = userReviews.map(review => 
           review.id === existingReviewId 
             ? { ...review, rating: reviewRating, comment: reviewText } 
             : review
         )
         setUserReviews(updatedReviews)
-        
         toast.success("Review updated successfully")
       } else {
-        // Create new review
-        console.log("Submitting review:", reviewData)
         const newReview = await createReview(reviewData)
-        
-        // Add the new review to the user's reviews
         setUserReviews([...userReviews, newReview])
-        
-        // Update the local state to indicate this booking has been reviewed
         const updatedBookings = bookings.map(booking => 
           booking.id === selectedBookingForReview.id 
             ? { ...booking, isReviewed: true } 
             : booking
         )
-        
         setBookings(updatedBookings)
         toast.success("Review submitted successfully")
       }
@@ -256,8 +200,6 @@ export default function CustomerBookings() {
       handleCloseReviewModal()
     } catch (error) {
       console.error("Error submitting review:", error)
-      
-      // Check if the error is because the booking was already reviewed
       if (error.response?.data?.includes("already exists for this booking")) {
         toast.error("You have already reviewed this booking")
       } else if (error.response?.data?.includes("hasn't been completed")) {
@@ -271,7 +213,6 @@ export default function CustomerBookings() {
   }
 
   const handleDeleteReview = async (booking) => {
-    // Find the review for this booking
     const reviewToDelete = userReviews.find(review => review.booking?.id === booking.id)
     
     if (!reviewToDelete) {
@@ -287,18 +228,13 @@ export default function CustomerBookings() {
     
     try {
       await deleteReview(reviewToDelete.id, user.id)
-      
-      // Remove the review from state
       setUserReviews(userReviews.filter(review => review.id !== reviewToDelete.id))
-      
-      // Update booking state
       const updatedBookings = bookings.map(b => 
         b.id === booking.id 
           ? { ...b, isReviewed: false } 
           : b
       )
       setBookings(updatedBookings)
-      
       toast.success("Review deleted successfully")
     } catch (error) {
       console.error("Error deleting review:", error)
@@ -310,29 +246,20 @@ export default function CustomerBookings() {
 
   const getBookingReviewStatus = (booking) => {
     if (booking.status !== "COMPLETED") return null
-    
-    // Check if the booking has been marked as reviewed during the initial fetch
     if (booking.isReviewed) return true
-    
-    // Check if the booking has a review in the userReviews array
     const review = userReviews.find(review => review.booking?.id === booking.id)
     return review
   }
 
   const sortedBookings = useMemo(() => {
-    if (!bookings || bookings.length === 0) {
-      return []
-    }
+    if (!bookings || bookings.length === 0) return []
     
-    // Create a safe copy of the bookings array
     let filteredBookings = [...bookings]
     
-    // Apply status filter if not 'all'
     if (filterStatus !== "all") {
       filteredBookings = filteredBookings.filter((booking) => booking.status === filterStatus)
     }
     
-    // Apply search filter if there's a query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filteredBookings = filteredBookings.filter((booking) => {
@@ -347,9 +274,7 @@ export default function CustomerBookings() {
       })
     }
     
-    // Sort bookings
     return filteredBookings.sort((a, b) => {
-      // Get booking dates safely
       const dateA = a.bookingDate ? new Date(a.bookingDate) : new Date(0)
       const dateB = b.bookingDate ? new Date(b.bookingDate) : new Date(0)
       
@@ -358,18 +283,15 @@ export default function CustomerBookings() {
       } else if (sortBy === "date-desc") {
         return dateB - dateA
       } else if (sortBy === "status") {
-        // Sort by status priority then by date
         const statusOrder = { COMPLETED: 3, CONFIRMED: 2, PENDING: 1, CANCELLED: 0 }
         const statusA = statusOrder[a.status] || 0
         const statusB = statusOrder[b.status] || 0
         return statusB - statusA || dateB - dateA
       }
-      // Default to date descending
       return dateB - dateA
     })
   }, [bookings, filterStatus, searchQuery, sortBy])
 
-  // Get status badge
   const getStatusBadge = (status) => {
     if (!status) return null;
     
@@ -591,90 +513,84 @@ export default function CustomerBookings() {
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 sm:px-8 sm:py-6">
-              <h1 className="text-2xl font-bold text-white">My Bookings</h1>
-              <p className="text-purple-100 mt-1">Manage all your service bookings in one place</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 sm:px-8 sm:py-6">
+            <h1 className="text-2xl font-bold text-white">My Bookings</h1>
+            <p className="text-purple-100 mt-1">Manage all your service bookings in one place</p>
+          </div>
 
-            {/* Filters and Search */}
-            <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search size={18} className="text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search bookings..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  />
+          {/* Filters and Search */}
+          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search size={18} className="text-gray-400" />
                 </div>
-
-                <button
-                  onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                >
-                  <Filter size={16} className="mr-2 text-gray-500" />
-                  Filters
-                  <ChevronDown
-                    size={16}
-                    className={`ml-2 transition-transform duration-200 ${isFiltersOpen ? "transform rotate-180" : ""}`}
-                  />
-                </button>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search bookings..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                />
               </div>
 
-              {isFiltersOpen && (
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      id="filter-status"
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="PENDING">Pending</option>
-                      <option value="CONFIRMED">Confirmed</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="CANCELLED">Cancelled</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 mb-1">
-                      Sort By
-                    </label>
-                    <select
-                      id="sort-by"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md"
-                    >
-                      <option value="date-desc">Date (Newest First)</option>
-                      <option value="date-asc">Date (Oldest First)</option>
-                      <option value="name-asc">Service Name (A-Z)</option>
-                      <option value="name-desc">Service Name (Z-A)</option>
-                      <option value="price-desc">Price (High to Low)</option>
-                      <option value="price-asc">Price (Low to High)</option>
-                    </select>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              >
+                <Filter size={16} className="mr-2 text-gray-500" />
+                Filters
+                <ChevronDown
+                  size={16}
+                  className={`ml-2 transition-transform duration-200 ${isFiltersOpen ? "transform rotate-180" : ""}`}
+                />
+              </button>
             </div>
 
-            {/* Bookings List */}
-            {renderBookingsList()}
+            {isFiltersOpen && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    id="filter-status"
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sort By
+                  </label>
+                  <select
+                    id="sort-by"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md"
+                  >
+                    <option value="date-desc">Date (Newest First)</option>
+                    <option value="date-asc">Date (Oldest First)</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Bookings List */}
+          {renderBookingsList()}
         </div>
       </div>
       
@@ -787,6 +703,6 @@ export default function CustomerBookings() {
           </div>
         </div>
       )}
-    </ErrorBoundary>
+    </div>
   )
 }
