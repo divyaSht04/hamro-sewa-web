@@ -11,13 +11,6 @@ const getAuthHeaders = () => {
   };
 };
 
-/**
- * Get a customer's loyalty progress with a specific service provider
- * 
- * @param {number} customerId - The customer ID
- * @param {number} serviceProviderId - The service provider ID
- * @returns {Promise<Object>} - Loyalty progress information
- */
 export const getLoyaltyProgress = async (customerId, serviceProviderId) => {
   try {
     const response = await axios.get(
@@ -52,9 +45,8 @@ export const getLoyaltyProgress = async (customerId, serviceProviderId) => {
       completedBookings: 0,
       bookingsNeededForDiscount: 4,
       eligibleForDiscount: false,
-      discountEligible: false, 
-      discountPercentage: 20,
-      bookingsToDiscount: 4 // Default is 4 bookings needed
+      discountEligible: false, // Add the new flag
+      discountPercentage: 20
     };
   }
 };
@@ -70,7 +62,7 @@ export const getAllLoyaltyProgress = async (customerId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching all loyalty progress:', error.response?.data || error.message);
-    return [];
+    return []; // Return empty array in case of error
   }
 };
 
