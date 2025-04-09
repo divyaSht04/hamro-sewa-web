@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const handleError = (error) => {
     let message = error.message || 'An unexpected error occurred';
     
-    // Check if the error is a network error (server down or no internet)
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       message = 'Server is currently unavailable. Please try again later.';
       toast.error(message);
@@ -74,9 +73,7 @@ export const AuthProvider = ({ children }) => {
         setUser(response.user);
         setUserRole(response.user.role);
         
-        // Redirect based on role 
         const rolePath = ROLE_PATHS[response.user.role] || '/';
-        // const from = location.state?.from?.pathname || rolePath;
 
         console.log(rolePath);
         
