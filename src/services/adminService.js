@@ -27,7 +27,6 @@ export const updateAdminProfile = async (adminId, adminData) => {
           formData.append('image', adminData.image);
         }
       } else if (key !== 'existingImage' && adminData[key] !== null && adminData[key] !== undefined) {
-        // Skip the existingImage field as it's only used on the frontend
         formData.append(key, adminData[key]);
       }
     });

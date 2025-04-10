@@ -6,9 +6,9 @@ export const getCustomerInfo = async (customerId) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/customer/info/${customerId}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+       'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
-    });
+    }); 
 
     return response.data;
   } catch (error) {
@@ -19,7 +19,6 @@ export const getCustomerInfo = async (customerId) => {
 
 export const updateCustomerProfile = async (customerId, customerData) => {
   try {
-    // Create FormData for sending both profile data and image
     const formData = new FormData();
     
     Object.keys(customerData).forEach(key => {

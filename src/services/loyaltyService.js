@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8084';
 
-// Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {

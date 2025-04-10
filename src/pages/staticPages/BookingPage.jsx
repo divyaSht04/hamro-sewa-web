@@ -65,23 +65,17 @@ export default function BookingPage() {
     
     try {
       setLoyaltyLoading(true);
-      console.log(`Checking loyalty for user ${user.id} with provider ${provider.id}`);
+      // Reset eligibility before checking
+      setIsEligibleForDiscount(false);
+      setDiscountPercentage(0);
       
+      console.log(`Checking loyalty for user ${user.id} with provider ${provider.id}`);
       const loyaltyData = await loyaltyService.getLoyaltyProgress(user.id, provider.id);
       setLoyaltyStatus(loyaltyData);
       
       console.log('Loyalty data received:', loyaltyData);
       
-      // Manual override for testing - REMOVE IN PRODUCTION
-      // This is to ensure the discount displays correctly during development
-      if (provider && user) {
-        console.log("FORCING LOYALTY DISCOUNT FOR TESTING");
-        setIsEligibleForDiscount(true);
-        setDiscountPercentage(20);
-        return;
-      }
-      
-      // Enhanced check for discount eligibility using multiple conditions
+      // Check for discount eligibility
       const isEligible = (
         loyaltyData.discountEligible === true || 
         loyaltyData.eligibleForDiscount === true || 
@@ -97,10 +91,8 @@ export default function BookingPage() {
       }
     } catch (error) {
       console.error("Error checking loyalty status:", error);
-      
-      // Even if there's an error, force discount for testing
-      setIsEligibleForDiscount(true);
-      setDiscountPercentage(20);
+      setIsEligibleForDiscount(false);
+      setDiscountPercentage(0);
     } finally {
       setLoyaltyLoading(false);
     }
@@ -338,14 +330,16 @@ export default function BookingPage() {
             <h1 className="text-3xl font-bold mb-2">Book Your Service</h1>
             <p className="text-purple-100 text-lg">Complete your booking for {service.serviceName}</p>
             
-            {/* Loyalty discount notification - always visible during development */}
-            <div className="mt-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
-              <CheckCircle className="mr-2 flex-shrink-0" size={20} />
-              <div>
-                <p className="font-bold">20% Loyalty Discount Applied!</p>
-                <p className="text-sm">Your price has been automatically reduced as a loyal customer.</p>
+            {/* Loyalty discount notification - only shown when eligible */}
+            {isEligibleForDiscount && (
+              <div className="mt-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+                <CheckCircle className="mr-2 flex-shrink-0" size={20} />
+                <div>
+                  <p className="font-bold">20% Loyalty Discount Applied!</p>
+                  <p className="text-sm">Your price has been automatically reduced as a loyal customer.</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Service summary */}
@@ -545,37 +539,69 @@ export default function BookingPage() {
                 <div className="mt-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
                   <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2">Booking Summary</h4>
                   
-                  {/* ALWAYS show loyalty discount in dev mode */}
-                  <div className="bg-green-50 p-3 rounded-md mb-3 border border-green-200">
-                    <div className="flex items-center">
-                      <CheckCircle className="text-green-500 mr-2 flex-shrink-0" size={18} />
-                      <div>
-                        <p className="text-sm font-bold text-green-700">
-                          20% Loyalty Discount Applied!
-                        </p>
-                        <p className="text-xs text-green-600">
-                          You've earned this discount with your loyalty to this service provider.
-                        </p>
+                  {/* Loyalty status display */}
+                  {loyaltyLoading ? (
+                    <div className="py-2 flex items-center justify-center text-gray-500">
+                      <RefreshCw className="animate-spin mr-2" size={16} />
+                      <span>Checking loyalty benefits...</span>
+                    </div>
+                  ) : isEligibleForDiscount ? (
+                    <div className="bg-green-50 p-3 rounded-md mb-3 border border-green-200">
+                      <div className="flex items-center">
+                        <CheckCircle className="text-green-500 mr-2 flex-shrink-0" size={18} />
+                        <div>
+                          <p className="text-sm font-bold text-green-700">
+                            20% Loyalty Discount Applied!
+                          </p>
+                          <p className="text-xs text-green-600">
+                            You've earned this discount with your loyalty to this service provider.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : loyaltyStatus && loyaltyStatus.completedBookings > 0 ? (
+                    <div className="bg-blue-50 p-3 rounded-md mb-3 border border-blue-100">
+                      <div className="flex items-start">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-blue-700">
+                            You've completed {loyaltyStatus.completedBookings} bookings with this provider.
+                            {loyaltyStatus.bookingsNeededForDiscount && (
+                              <span> Complete {loyaltyStatus.bookingsNeededForDiscount - loyaltyStatus.completedBookings} more to earn a 20% discount!</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-md font-medium text-gray-600">Service Price</span>
-                      <span className="text-lg font-medium text-gray-400 line-through">Rs. {service.price.toFixed(2)}</span>
+                      {isEligibleForDiscount ? (
+                        <span className="text-lg font-medium text-gray-400 line-through">Rs. {service.price.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-lg font-medium text-gray-900">Rs. {service.price.toFixed(2)}</span>
+                      )}
                     </div>
                     
-                    <div className="flex justify-between items-center text-green-600">
-                      <span className="text-md font-medium">Loyalty Discount (20%)</span>
-                      <span className="text-lg font-medium">-Rs. {(service.price * 0.2).toFixed(2)}</span>
-                    </div>
+                    {isEligibleForDiscount && (
+                      <div className="flex justify-between items-center text-green-600">
+                        <span className="text-md font-medium">Loyalty Discount (20%)</span>
+                        <span className="text-lg font-medium">-Rs. {(service.price * 0.2).toFixed(2)}</span>
+                      </div>
+                    )}
                     
                     <div className="flex justify-between border-t border-gray-200 pt-4 mt-2">
                       <span className="text-lg font-semibold text-gray-700">Total Price</span>
-                      <span className="text-2xl font-bold text-green-600">
-                        Rs. {(service.price * 0.8).toFixed(2)}
-                      </span>
+                      {isEligibleForDiscount ? (
+                        <span className="text-2xl font-bold text-green-600">
+                          Rs. {(service.price * 0.8).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-2xl font-bold text-gray-900">
+                          Rs. {service.price.toFixed(2)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

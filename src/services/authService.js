@@ -1,16 +1,13 @@
 import axios from 'axios';
 const API_URL = 'http://localhost:8084/auth';
 
-// Create a custom axios instance for authentication
 const authAxios = axios.create({
   baseURL: API_URL,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
 });
 
-// Add request interceptor to the custom instance
 authAxios.interceptors.request.use(
   (config) => {
-    // Skip token check for login endpoint
     if (config.url.includes('/login')) {
       return config;
     }
@@ -25,11 +22,9 @@ authAxios.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add response interceptor to the custom instance
 authAxios.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle network errors (server down, connection refused, etc.)
     if (!error.response) {
       return Promise.reject(new Error('Server is currently unavailable. Please try again later.'));
     }
@@ -135,7 +130,6 @@ export const authService = {
       }
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails on server, clear local storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       delete axios.defaults.headers.common['Authorization'];
