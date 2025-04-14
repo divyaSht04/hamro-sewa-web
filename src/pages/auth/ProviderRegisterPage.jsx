@@ -1,20 +1,70 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { LogIn } from "lucide-react"
 import { AuthForm } from "../../components/auth/AuthFrom"
-import { registerServiceProvider } from "../../services/registrationService"
+import { OTPVerification } from "../../components/auth/OTPVerification"
+import { initiateServiceProviderRegistration, verifyServiceProviderRegistration } from "../../services/registrationService"
 import toast from "react-hot-toast"
 
 export function ProviderRegisterPage() {
   const navigate = useNavigate()
+  const [step, setStep] = useState("registration") // "registration" or "verification"
+  const [registrationData, setRegistrationData] = useState(null)
+  const [userEmail, setUserEmail] = useState("")
+  const [userImage, setUserImage] = useState(null) // Store image for re-upload during verification
 
-  const handleSubmit = async (formData) => {
+  // Step 1: Initiate registration and send OTP
+  const handleInitiateRegistration = async (formData) => {
     try {
-      const response = await registerServiceProvider(formData)
+      setRegistrationData(formData) // Store form data for later use
+      setUserEmail(formData.email) // Store email for OTP verification
+      
+      // Store image for re-upload during verification
+      if (formData.photo) {
+        setUserImage(formData.photo)
+      }
+      
+      await initiateServiceProviderRegistration(formData)
+      toast.success("Verification code sent to your email")
+      setStep("verification") // Move to verification step
+    } catch (error) {
+      toast.error(error.message || "Registration initiation failed. Please try again.")
+    }
+  }
+
+  // Step 2: Verify OTP and complete registration
+  const handleVerifyOTP = async (otpValue) => {
+    try {
+      const verificationData = {
+        email: userEmail,
+        otp: otpValue
+      }
+      
+      // Pass the stored image from step 1 as second parameter for re-upload
+      await verifyServiceProviderRegistration(verificationData, userImage)
       toast.success("Registration successful! Please login to continue.")
       navigate('/login')
     } catch (error) {
-      toast.error(error.message || "Registration failed. Please try again.")
+      toast.error(error.message || "Verification failed. Please try again.")
+      throw error // Rethrow to handle in OTPVerification component
+    }
+  }
+
+  // Handle OTP resend
+  const handleResendOTP = async () => {
+    if (!registrationData) {
+      toast.error("Registration data missing. Please start over.")
+      setStep("registration")
+      return
+    }
+    
+    try {
+      await initiateServiceProviderRegistration(registrationData)
+      return true // Indicate success to the OTP component
+    } catch (error) {
+      toast.error(error.message || "Failed to resend verification code.")
+      throw error
     }
   }
 
@@ -54,7 +104,16 @@ export function ProviderRegisterPage() {
             </motion.p>
           </div>
 
-          <AuthForm type="register" userType="provider" onSubmit={handleSubmit} />
+          {step === "registration" ? (
+            <AuthForm type="register" userType="provider" onSubmit={handleInitiateRegistration} />
+          ) : (
+            <OTPVerification 
+              email={userEmail} 
+              onVerify={handleVerifyOTP} 
+              onResend={handleResendOTP}
+              userType="provider"
+            />
+          )}
 
           <motion.div
             initial={{ opacity: 0 }}
