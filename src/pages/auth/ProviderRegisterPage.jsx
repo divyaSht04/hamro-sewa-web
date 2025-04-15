@@ -47,11 +47,10 @@ export function ProviderRegisterPage() {
       navigate('/login')
     } catch (error) {
       toast.error(error.message || "Verification failed. Please try again.")
-      throw error // Rethrow to handle in OTPVerification component
+      throw error 
     }
   }
 
-  // Handle OTP resend
   const handleResendOTP = async () => {
     if (!registrationData) {
       toast.error("Registration data missing. Please start over.")

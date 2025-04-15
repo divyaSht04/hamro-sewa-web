@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "../../auth/AuthContext"
 import { User, Mail, Phone, Camera, Calendar, MapPin, Building, LogOut, Shield, Info, AlertCircle } from "lucide-react"
+import { getDateOnly } from "../../utils/dateUtils"
 import AdminLayout from "../../components/admin/AdminLayout"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
@@ -61,7 +62,7 @@ const AdminProfile = () => {
           name: data.name || "",
           email: data.email || "",
           phone: data.phone || "",
-          dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split("T")[0] : "",
+          dateOfBirth: data.dateOfBirth ? getDateOnly(data.dateOfBirth) : "",
           address: data.address || "",
           department: data.department || "",
           image: null,

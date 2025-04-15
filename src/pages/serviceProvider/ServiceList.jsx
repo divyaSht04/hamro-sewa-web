@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Eye, X, ChevronLeft, ChevronRight, Search, FileText, Edit, Trash2, PlusCircle, Filter, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { getDateOnly } from "../../utils/dateUtils"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { Link } from "react-router-dom"
 import toast from "react-hot-toast"
@@ -30,6 +31,8 @@ export function ServiceProviderServiceList() {
   const categories = ["All", "Cleaning", "Maintenance", "Electrical", "Plumbing", "Carpentry", "Painting", "Gardening", "Home Improvement", "Professional Services", "Education", "Health & Wellness", "Beauty", "Other"]
   const statuses = ["All", "APPROVED", "PENDING", "REJECTED"]
 
+  // We've moved the date handling to utils/dateUtils.js
+
   useEffect(() => {
     const fetchServices = async () => {
       if (!user?.id) return;
@@ -38,19 +41,24 @@ export function ServiceProviderServiceList() {
       try {
         const data = await getProviderServices(user.id);
         // Transform the data to match our component's expected format
-        const formattedServices = data.map(service => ({
-          id: service.id,
-          name: service.serviceName,
-          category: service.category,
-          price: service.price,
-          status: service.status || "PENDING", // Default to pending if status is not provided
-          description: service.description,
-          attachedFile: service.pdfPath,
-          image: service.imagePath ? getServiceImageUrl(service.id) : null,
-          createdAt: new Date(service.createdAt).toISOString().split('T')[0],
-          bookings: service.bookings || 0,
-          adminFeedback: service.adminFeedback,
-        }));
+        const formattedServices = data.map(service => {
+          // Use our utility function for safe date formatting
+          const formattedDate = getDateOnly(service.createdAt);
+          
+          return {
+            id: service.id,
+            name: service.serviceName,
+            category: service.category,
+            price: service.price,
+            status: service.status || "PENDING", // Default to pending if status is not provided
+            description: service.description,
+            attachedFile: service.pdfPath,
+            image: service.imagePath ? getServiceImageUrl(service.id) : null,
+            createdAt: formattedDate,
+            bookings: service.bookings || 0,
+            adminFeedback: service.adminFeedback,
+          };
+        });
         
         setServices(formattedServices);
       } catch (error) {

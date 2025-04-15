@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useAuth } from "../../auth/AuthContext"
 import { getCustomerInfo, updateCustomerProfile } from "../../services/customerService"
+import { getDateOnly } from "../../utils/dateUtils"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { FiUser, FiMail, FiPhone, FiHome, FiCalendar, FiCamera } from "react-icons/fi"
@@ -47,7 +48,7 @@ export function EditProfilePage() {
         setFormData({
           username: customerInfo.username || "",
           fullName: customerInfo.fullName || "",
-          dateOfBirth: customerInfo.dateOfBirth ? customerInfo.dateOfBirth.split("T")[0] : "",
+          dateOfBirth: customerInfo.dateOfBirth ? getDateOnly(customerInfo.dateOfBirth) : "",
           phoneNumber: customerInfo.phoneNumber || "",
           address: customerInfo.address || "",
           email: customerInfo.email || "",

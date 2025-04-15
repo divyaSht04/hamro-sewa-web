@@ -1076,8 +1076,6 @@ export default function ServiceDetailsPage() {
                   </Link>
                 </div>
               )}
-
-              {/* Removed inline booking form - now redirecting to dedicated booking page */}
             </div>
           </div>
         </div>

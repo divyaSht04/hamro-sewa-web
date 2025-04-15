@@ -39,23 +39,18 @@ export const initiateCustomerRegistration = async (userData) => {
 // Step 2: Verify OTP and complete customer registration
 export const verifyCustomerRegistration = async (verificationData, photo) => {
   try {
-    // Need to use FormData if we have a photo
     if (photo) {
       const formData = new FormData();
       formData.append('image', photo);
-      
-      // Add each verification property separately - this approach is more reliable
       formData.append('email', verificationData.email);
       formData.append('otp', verificationData.otp);
       
       const response = await axios.post(
         `${API_BASE_URL}/auth/verify-customer-registration`, 
         formData
-        // Note: Don't set Content-Type header manually, browser will set it correctly with boundary
       );
       return response.data;
     } else {
-      // If no photo, just send the verification data as JSON
       const response = await axios.post(`${API_BASE_URL}/auth/verify-customer-registration`, verificationData);
       return response.data;
     }
@@ -104,23 +99,19 @@ export const initiateServiceProviderRegistration = async (userData) => {
 // Step 2: Verify OTP and complete service provider registration
 export const verifyServiceProviderRegistration = async (verificationData, photo) => {
   try {
-    // Need to use FormData if we have a photo
     if (photo) {
       const formData = new FormData();
       formData.append('image', photo);
       
-      // Add each verification property separately - this approach is more reliable
       formData.append('email', verificationData.email);
       formData.append('otp', verificationData.otp);
       
       const response = await axios.post(
         `${API_BASE_URL}/auth/verify-provider-registration`, 
         formData
-        // Note: Don't set Content-Type header manually, browser will set it correctly with boundary
       );
       return response.data;
     } else {
-      // If no photo, just send the verification data as JSON
       const response = await axios.post(`${API_BASE_URL}/auth/verify-provider-registration`, verificationData);
       return response.data;
     }

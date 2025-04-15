@@ -27,6 +27,7 @@ import { useAuth } from "../../auth/AuthContext"
 import toast from "react-hot-toast"
 import { getProviderBookings, updateBookingStatus, cancelBooking } from "../../services/bookingService"
 import { format } from "date-fns"
+import { parseDate } from "../../utils/dateUtils"
 
 function BookingManagement() {
   const { user } = useAuth()
@@ -92,13 +93,13 @@ function BookingManagement() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "date-asc":
-          return new Date(a.bookingDateTime || 0) - new Date(b.bookingDateTime || 0)
+          return parseDate(a.bookingDateTime, new Date(0)) - parseDate(b.bookingDateTime, new Date(0))
         case "date-desc":
-          return new Date(b.bookingDateTime || 0) - new Date(a.bookingDateTime || 0)
+          return parseDate(b.bookingDateTime, new Date(0)) - parseDate(a.bookingDateTime, new Date(0))
         case "created-asc":
-          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+          return parseDate(a.createdAt, new Date(0)) - parseDate(b.createdAt, new Date(0))
         case "created-desc":
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+          return parseDate(b.createdAt, new Date(0)) - parseDate(a.createdAt, new Date(0))
         default:
           return 0
       }
@@ -247,11 +248,12 @@ function BookingManagement() {
     if (!dateTimeStr) return "No date provided";
     
     try {
-      const dateObj = new Date(dateTimeStr);
+      // Use our utility function to properly parse array or string dates
+      const dateObj = parseDate(dateTimeStr);
       return format(dateObj, "MMM d, yyyy 'at' h:mm a");
     } catch (error) {
       console.error("Date formatting error:", error);
-      return dateTimeStr;
+      return "Invalid date";
     }
   }
 

@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { parseDate, formatDate as formatDateUtil } from '../../utils/dateUtils'
 import { Link } from "react-router-dom"
 import {
   Calendar,
@@ -275,8 +276,9 @@ export default function CustomerBookings() {
     }
     
     return filteredBookings.sort((a, b) => {
-      const dateA = a.bookingDate ? new Date(a.bookingDate) : new Date(0)
-      const dateB = b.bookingDate ? new Date(b.bookingDate) : new Date(0)
+      // Use our shared utility function to parse dates
+      const dateA = parseDate(a.bookingDateTime, new Date(0))
+      const dateB = parseDate(b.bookingDateTime, new Date(0))
       
       if (sortBy === "date-asc") {
         return dateA - dateB
@@ -333,15 +335,9 @@ export default function CustomerBookings() {
     }
   }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+  const formatDate = (dateValue) => {
+    // Use our shared utility function to format dates
+    return formatDateUtil(dateValue, 'medium', 'Date not available')
   }
 
   const renderBookingsList = () => {

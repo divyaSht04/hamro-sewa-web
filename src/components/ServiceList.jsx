@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { parseDate } from '../utils/dateUtils';
 import { Home, Wrench, Zap, Flower2, PaintBucket, Hammer, ServerOff, Info } from 'lucide-react';
 import { getApprovedServices, getServiceImageUrl } from '../services/providerServiceApi';
 import { Link } from 'react-router-dom';
