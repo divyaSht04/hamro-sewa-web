@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { Route, Routes, useLocation } from "react-router-dom"
+import { useAuth } from "./auth/AuthContext"
+import { NotificationProvider } from "./context/NotificationContext"
+import { Toaster } from "react-hot-toast"
 import { ArrowUp } from "lucide-react"
 import Header from "./components/Header"
 import Footer from "./components/Footer"
@@ -27,7 +30,6 @@ import BookingManagement from "./pages/serviceProvider/BookingManagemt"
 import { PrivateRoute } from "./auth/PrivateRoute"
 import { PublicRoute } from "./auth/PublicRoute"
 import { AuthProvider } from "./auth/AuthContext"
-import { Toaster } from "react-hot-toast"
 import { ROLES } from "./constants/roles"
 import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
@@ -284,8 +286,10 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" />
-      <AppContent />
+      <NotificationProvider>
+        <Toaster position="top-right" />
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   )
 }

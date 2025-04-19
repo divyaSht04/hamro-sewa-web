@@ -4,6 +4,9 @@ import { useState, useEffect } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
 import { FaUser, FaSignOutAlt, FaHistory, FaCalendarCheck, FaBars, FaTimes } from "react-icons/fa"
 import { useAuth } from "../auth/AuthContext"
+import { useNotifications } from "../context/NotificationContext"
+import NotificationIcon from "./notification/NotificationIcon"
+import NotificationPanel from "./notification/NotificationPanel"
 import { ROLES } from "../constants/roles"
 // import logo from "../assets/images/logo.png"
 
@@ -100,11 +103,19 @@ const Header = () => {
         <div className="hidden md:flex items-center space-x-4">
           {user ? (
             <div className="relative group">
-              <button className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all duration-300">
-                <FaUser />
-                <span>{user.name || "User"}</span>
-              </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+              <div className="flex items-center space-x-3">
+                {/* Notification Icon */}
+                <NotificationIcon />
+                
+                <button className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all duration-300">
+                  <FaUser />
+                  <span>{user.name || "User"}</span>
+                </button>
+              </div>
+              {/* Notification Panel */}
+              <NotificationPanel />
+              
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
                 {user.role === ROLES.ADMIN && (
                   <Link
                     to="/admin/dashboard"

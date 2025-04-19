@@ -1030,7 +1030,14 @@ export default function ServiceDetailsPage() {
                   </span>
                 </div>
               </div>
+              {/* <LoyaltyStatusCard 
+                          customerId={user.id} 
+                          serviceProviderId={provider.id} 
+                          providerName={provider.companyName || provider.fullName || provider.username}
+                        /> */}
+                        
 
+                        {console.log(provider)};
               {user ? (
                 service.status === "APPROVED" ? (
                   <>

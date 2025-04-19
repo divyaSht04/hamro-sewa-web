@@ -23,6 +23,7 @@ import {
   getServicesByStatus,
   approveService,
   rejectService,
+  deleteService,
   getServiceImageUrl,
   getServiceProviderImageUrl,
   getServicePdfUrl,
@@ -88,12 +89,22 @@ const ServiceList = () => {
     setShowDeleteConfirm(id)
   }
 
-  const handleDelete = (id) => {
-    // This functionality would typically be handled by a deleteService API call
-    // For now, we're just filtering the services in the state
-    setServices(services.filter((service) => service.id !== id))
-    setShowDeleteConfirm(null)
-    toast.success("Service deleted successfully")
+  // Function to handle the actual service deletion
+  const handleDelete = async (id) => {
+    try {
+      // Call the API to delete the service
+      await deleteService(id)
+      // Update local state and show success message
+      setServices(services.filter((service) => service.id !== id))
+      setShowDeleteConfirm(null)
+      toast.success("Service deleted successfully")
+      // Refresh the services list to ensure it's up to date
+      fetchServices()
+    } catch (error) {
+      console.error("Error deleting service:", error)
+      toast.error("Failed to delete service: " + (error.response?.data || error.message))
+      setShowDeleteConfirm(null)
+    }
   }
 
   const openServiceDetails = (service) => {

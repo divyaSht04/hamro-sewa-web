@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Eye, X, ChevronLeft, ChevronRight, Search, FileText, Edit, Trash2, PlusCircle, Filter, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { Eye, X, ChevronLeft, ChevronRight, Search, FileText, Edit, Trash2, PlusCircle, Filter, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertTriangle, Star } from 'lucide-react'
 import { getDateOnly } from "../../utils/dateUtils"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { Link } from "react-router-dom"
 import toast from "react-hot-toast"
 import { getProviderServices, deleteService, getServiceImageUrl, getServicePdfUrl } from "../../services/providerServiceApi"
 import { useAuth } from "../../auth/AuthContext"
+import ServiceReviewList from "../../components/serviceProvider/ServiceReviewList"
 import axios from 'axios'
 
 export function ServiceProviderServiceList() {
@@ -479,6 +480,13 @@ export function ServiceProviderServiceList() {
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Description</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-gray-700 whitespace-pre-line">{selectedService.description}</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Customer Reviews</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <ServiceReviewList serviceId={selectedService.id} />
                 </div>
               </div>
 

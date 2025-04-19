@@ -92,3 +92,20 @@ export const getServiceProviderImageUrl = (providerId) => {
 export const getServicePdfUrl = (serviceId) => {
   return `${API_BASE_URL}/provider-services/pdf/${serviceId}`;
 };
+
+/**
+ * Delete a service
+ * @param {number} serviceId - The ID of the service to delete
+ * @returns {Promise} A promise that resolves when the service is deleted
+ */
+export const deleteService = async (serviceId) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/provider-services/${serviceId}`, {
+      headers: getAuthHeaders()
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    throw error;
+  }
+};

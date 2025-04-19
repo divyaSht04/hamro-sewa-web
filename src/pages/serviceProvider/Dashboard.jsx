@@ -24,6 +24,7 @@ import ServiceProviderLayout from "../../components/serviceProvider/ServiceProvi
 import { useAuth } from "../../auth/AuthContext"
 import { Link } from "react-router-dom"
 import toast from "react-hot-toast"
+import NotificationsWidget from "../../components/serviceProvider/NotificationsWidget"
 
 const StatCard = ({ title, value, icon: Icon, change, changeType, color, bgColor }) => (
   <motion.div
@@ -209,57 +210,47 @@ export function ServiceProviderDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Activity */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-md hover:shadow-lg transition-all">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
-                <Link to="#" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-                  View All <ChevronRight size={16} className="ml-1" />
-                </Link>
-              </div>
-            </div>
-            <div className="p-4 divide-y divide-gray-50">
-              {recentActivities.map((activity, index) => (
-                <RecentActivity key={index} {...activity} />
-              ))}
-            </div>
+          {/* Real-time Notifications */}
+          <div className="lg:col-span-2">
+            <NotificationsWidget />
           </div>
 
           {/* Performance Metrics */}
-          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-800">Performance Metrics</h2>
-            </div>
-            <div className="p-6 space-y-6">
-              <PerformanceMetric
-                icon={<Users className="w-5 h-5 text-blue-500" />}
-                label="Total Clients"
-                value={performanceData.totalClients}
-              />
-              <PerformanceMetric
-                icon={<CheckCircle className="w-5 h-5 text-green-500" />}
-                label="Completed Jobs"
-                value={performanceData.completedJobs}
-              />
-              <PerformanceMetric
-                icon={<DollarSign className="w-5 h-5 text-amber-500" />}
-                label="Total Earnings"
-                value={performanceData.totalEarnings}
-              />
-              <PerformanceMetric
-                icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
-                label="Response Rate"
-                value={performanceData.responseRate}
-              />
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-800">Performance Metrics</h2>
+              </div>
+              <div className="p-6 space-y-6">
+                <PerformanceMetric
+                  icon={<Users className="w-5 h-5 text-blue-500" />}
+                  label="Total Clients"
+                  value={performanceData.totalClients}
+                />
+                <PerformanceMetric
+                  icon={<CheckCircle className="w-5 h-5 text-green-500" />}
+                  label="Completed Jobs"
+                  value={performanceData.completedJobs}
+                />
+                <PerformanceMetric
+                  icon={<DollarSign className="w-5 h-5 text-amber-500" />}
+                  label="Total Earnings"
+                  value={performanceData.totalEarnings}
+                />
+                <PerformanceMetric
+                  icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
+                  label="Response Rate"
+                  value={performanceData.responseRate}
+                />
 
-              <Link
-                to="/provider/analytics"
-                className="mt-4 flex justify-center items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                <BarChart2 size={16} className="mr-2" />
-                View detailed analytics
-              </Link>
+                <Link
+                  to="/provider/analytics"
+                  className="mt-4 flex justify-center items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  <BarChart2 size={16} className="mr-2" />
+                  View detailed analytics
+                </Link>
+              </div>
             </div>
           </div>
         </div>

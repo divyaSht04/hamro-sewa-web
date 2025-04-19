@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import AdminLayout from "../../components/admin/AdminLayout"
+import AdminNotificationsWidget from "../../components/admin/AdminNotificationsWidget"
 
 const StatCard = ({ title, value, icon: Icon, change, changeType, color }) => (
   <div className="bg-white rounded-lg shadow p-6">
@@ -30,58 +31,9 @@ const StatCard = ({ title, value, icon: Icon, change, changeType, color }) => (
   </div>
 )
 
-const RecentActivity = ({ type, message, time, status }) => {
-  const getStatusIcon = () => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case "pending":
-        return <Clock className="w-5 h-5 text-yellow-500" />
-      case "rejected":
-        return <XCircle className="w-5 h-5 text-red-500" />
-      default:
-        return <AlertCircle className="w-5 h-5 text-gray-500" />
-    }
-  }
-
-  return (
-    <div className="flex items-center py-3">
-      <div className="mr-4">{getStatusIcon()}</div>
-      <div className="flex-1">
-        <p className="text-sm text-gray-800">{message}</p>
-        <p className="text-xs text-gray-500 mt-1">{time}</p>
-      </div>
-    </div>
-  )
-}
+// AdminNotificationsWidget component replaces the RecentActivity component
 
 const AdminDashboard = () => {
-  const [recentActivities] = useState([
-    {
-      type: "service",
-      message: "New service request from Alice Johnson",
-      time: "5 minutes ago",
-      status: "pending",
-    },
-    {
-      type: "approval",
-      message: "Approved plumbing service by Bob Smith",
-      time: "30 minutes ago",
-      status: "completed",
-    },
-    {
-      type: "rejection",
-      message: "Rejected invalid service request",
-      time: "1 hour ago",
-      status: "rejected",
-    },
-    {
-      type: "service",
-      message: "New gardening service request",
-      time: "2 hours ago",
-      status: "pending",
-    },
-  ])
 
   const stats = [
     {
@@ -129,15 +81,8 @@ const AdminDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
-            <div className="divide-y divide-gray-200">
-              {recentActivities.map((activity, index) => (
-                <RecentActivity key={index} {...activity} />
-              ))}
-            </div>
-          </div>
+          {/* Admin Notifications */}
+          <AdminNotificationsWidget />
 
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow p-6">
