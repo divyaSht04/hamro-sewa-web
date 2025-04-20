@@ -125,12 +125,36 @@ export default function CustomerBookings() {
   }
 
   const handleOpenReviewModal = (booking, isEditing = false) => {
-    setSelectedBookingForReview(booking)
+    console.log('Opening review modal with booking:', booking)
+    // Enhance the booking object with the provider service ID if it's missing
+    let enhancedBooking = { ...booking }
+    
+    // If we can see provider_service_id in the console output, make sure we capture it
+    // This might be missing from the booking object in state but present in the DOM
+    if (!enhancedBooking.provider_service_id && !enhancedBooking.providerServiceId) {
+      // Try to extract from various field names - camelCase and snake_case variations
+      const keys = Object.keys(enhancedBooking)
+      console.log('Available booking keys:', keys)
+      
+      // Look for any key that might contain provider and service and id
+      const possibleServiceIdKeys = keys.filter(key => 
+        key.toLowerCase().includes('provider') && 
+        key.toLowerCase().includes('service') && 
+        key.toLowerCase().includes('id'))
+      
+      if (possibleServiceIdKeys.length > 0) {
+        console.log('Found possible provider service ID keys:', possibleServiceIdKeys)
+        enhancedBooking.provider_service_id = enhancedBooking[possibleServiceIdKeys[0]]
+      }
+    }
+    
+    setSelectedBookingForReview(enhancedBooking)
     setShowReviewModal(true)
     
     if (isEditing) {
       const existingReview = userReviews.find(review => review.booking?.id === booking.id)
       if (existingReview) {
+        console.log('Found existing review:', existingReview)
         setReviewText(existingReview.comment || "")
         setReviewRating(existingReview.rating || 5)
         setExistingReviewId(existingReview.id)
@@ -154,7 +178,21 @@ export default function CustomerBookings() {
   }
 
   const handleSubmitReview = async () => {
-    if (!selectedBookingForReview || !user?.id) return
+    // Add more detailed validation and logging
+    if (!selectedBookingForReview) {
+      console.error('No booking selected for review')
+      toast.error("An error occurred. No booking selected.")
+      return
+    }
+    
+    if (!user?.id) {
+      console.error('User ID not available')
+      toast.error("Please log in to submit a review")
+      return
+    }
+    
+    // Log the booking object to help with debugging
+    console.log('Selected booking for review:', selectedBookingForReview)
     
     if (reviewRating < 1 || reviewRating > 5) {
       toast.error("Please select a rating between 1 and 5 stars")
@@ -169,12 +207,37 @@ export default function CustomerBookings() {
     setIsSubmittingReview(true)
     
     try {
+      // Now that we've fixed the backend models by removing @JsonIgnore,
+      // we should receive the providerService object with id directly
+      let serviceId = null;
+      
+      // Check for the service ID in the expected location
+      if (selectedBookingForReview.providerService?.id) {
+        serviceId = selectedBookingForReview.providerService.id;
+        console.log('Using providerService.id:', serviceId);
+      } else if (selectedBookingForReview.provider_service_id) {
+        serviceId = selectedBookingForReview.provider_service_id;
+        console.log('Using provider_service_id:', serviceId);
+      } else {
+        console.error('Service ID not found in booking:', selectedBookingForReview);
+        toast.error('Could not determine service ID. Please try again.');
+        setIsSubmittingReview(false);
+        return;
+      }
+      
+      if (!serviceId) {
+        console.error('Service ID not found in booking:', selectedBookingForReview);
+        toast.error('Could not determine service ID. Please try again.');
+        setIsSubmittingReview(false);
+        return;
+      }
+      
       const reviewData = {
         bookingId: selectedBookingForReview.id,
         rating: reviewRating,
         comment: reviewText,
         customerId: user.id,
-        providerServiceId: selectedBookingForReview.providerService.id
+        providerServiceId: serviceId
       }
       
       if (isEditingReview && existingReviewId) {
@@ -214,9 +277,14 @@ export default function CustomerBookings() {
   }
 
   const handleDeleteReview = async (booking) => {
-    const reviewToDelete = userReviews.find(review => review.booking?.id === booking.id)
+    // Find review in userReviews array - try multiple ways to match the booking
+    const reviewToDelete = userReviews.find(review => 
+      (review.booking?.id === booking.id) || 
+      (review.bookingId === booking.id)
+    )
     
     if (!reviewToDelete) {
+      console.error('Review not found for booking:', booking)
       toast.error("Review not found")
       return
     }
@@ -228,8 +296,16 @@ export default function CustomerBookings() {
     setIsDeletingReview(true)
     
     try {
+      // Ensure we have valid IDs when calling deleteReview
+      if (!reviewToDelete.id || !user?.id) {
+        throw new Error('Missing required IDs for deletion')
+      }
+      
       await deleteReview(reviewToDelete.id, user.id)
+      
+      // Update local state
       setUserReviews(userReviews.filter(review => review.id !== reviewToDelete.id))
+      
       const updatedBookings = bookings.map(b => 
         b.id === booking.id 
           ? { ...b, isReviewed: false } 
@@ -239,7 +315,7 @@ export default function CustomerBookings() {
       toast.success("Review deleted successfully")
     } catch (error) {
       console.error("Error deleting review:", error)
-      toast.error("Failed to delete review")
+      toast.error("Failed to delete review: " + (error.response?.data || error.message || 'Unknown error'))
     } finally {
       setIsDeletingReview(false)
     }
@@ -635,7 +711,12 @@ export default function CustomerBookings() {
                     
                     <div className="mt-4">
                       <p className="text-sm text-gray-500 mb-2">
-                        Service: {selectedBookingForReview?.providerService?.serviceName}
+                        Service: {
+                          selectedBookingForReview?.providerService?.serviceName || 
+                          selectedBookingForReview?.service?.serviceName || 
+                          selectedBookingForReview?.bookingDetails?.[0]?.serviceName || 
+                          'Unnamed Service'
+                        }
                       </p>
                       <p className="text-sm text-gray-500 mb-4">
                         Booking ID: #{selectedBookingForReview?.id}
@@ -688,11 +769,25 @@ export default function CustomerBookings() {
               </div>
               
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                {/* With the backend models fixed, we now show appropriate status information */}
+                {selectedBookingForReview && (
+                  <div className="mb-3 text-sm w-full">
+                    {selectedBookingForReview.providerService?.id ? (
+                      <p className="text-green-600">Ready to submit review for {selectedBookingForReview.providerService.serviceName}</p>
+                    ) : (
+                      <p className="text-red-500">
+                        Warning: Service information may be incomplete. Please refresh the page.
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <button
                   type="button"
                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={handleSubmitReview}
                   disabled={isSubmittingReview}
+                  data-testid="submit-review-button"
                 >
                   {isSubmittingReview ? (
                     <>

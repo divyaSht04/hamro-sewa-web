@@ -64,13 +64,13 @@ export default function ServiceDetailsPage() {
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
   const [bookingNotes, setBookingNotes] = useState("")
-  
+
   // Booking related state
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState(null)
   const [showBookingForm, setShowBookingForm] = useState(true) // Changed to true to always show the booking form
-  
+
   // Loyalty program state
   const [loyaltyLoading, setLoyaltyLoading] = useState(false)
   const [isEligibleForDiscount, setIsEligibleForDiscount] = useState(false)
@@ -86,11 +86,11 @@ export default function ServiceDetailsPage() {
           // Reset eligibility before checking
           setIsEligibleForDiscount(false);
           setDiscountPercentage(0);
-          
+
           const data = await getLoyaltyProgress(user.id, provider.id);
           setLoyaltyData(data);
           console.log('Service Details - Loyalty data received:', data);
-          
+
           // Check for discountEligible flag first
           if (data.discountEligible === true) {
             setIsEligibleForDiscount(true);
@@ -538,9 +538,8 @@ export default function ServiceDetailsPage() {
                 <Star
                   key={i}
                   size={16}
-                  className={`${
-                    i < Math.round(averageRating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-400"
-                  }`}
+                  className={`${i < Math.round(averageRating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-400"
+                    }`}
                 />
               ))}
               {averageRating ? (
@@ -553,13 +552,12 @@ export default function ServiceDetailsPage() {
             </div>
             {service.status && (
               <span
-                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${
-                  service.status === "APPROVED"
+                className={`text-xs uppercase px-3 py-1 rounded-full font-medium ${service.status === "APPROVED"
                     ? "bg-green-600"
                     : service.status === "PENDING"
                       ? "bg-yellow-500"
                       : "bg-red-600"
-                }`}
+                  }`}
               >
                 {service.status}
               </span>
@@ -570,15 +568,15 @@ export default function ServiceDetailsPage() {
             {provider && (
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm mr-2">
-                  {provider.name?.charAt(0).toUpperCase() || "P"}
+                  {provider.businessName?.charAt(0).toUpperCase() || "P"}
                 </div>
                 <p className="text-white/90">
-                  Provided by <span className="font-medium">{provider.name}</span>
+                  {console.log(provider)}
+                  Provided by <span className="font-medium">{provider.businessName}</span>
                 </p>
               </div>
             )}
             <div className="flex items-center">
-              <DollarSign className="w-5 h-5 text-white/80 mr-1" />
               <p className="text-white/90 font-medium">Rs. {service.price.toFixed(2)}</p>
             </div>
             <div className="flex items-center">
@@ -613,21 +611,19 @@ export default function ServiceDetailsPage() {
               <nav className="flex">
                 <button
                   onClick={() => setActiveTab("overview")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${
-                    activeTab === "overview"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "overview"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  } transition-colors`}
+                    } transition-colors`}
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className={`py-4 px-6 font-medium text-sm flex-1 ${
-                    activeTab === "reviews"
+                  className={`py-4 px-6 font-medium text-sm flex-1 ${activeTab === "reviews"
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  } transition-colors`}
+                    } transition-colors`}
                 >
                   Reviews ({reviews.length})
                 </button>
@@ -693,13 +689,12 @@ export default function ServiceDetailsPage() {
                         <Info size={20} className="text-blue-500" />
                         <span className="font-medium">Service Status:</span>
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            service.status === "APPROVED"
+                          className={`px-2 py-1 text-xs rounded-full ${service.status === "APPROVED"
                               ? "bg-green-100 text-green-800"
                               : service.status === "PENDING"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {service.status}
                         </span>
@@ -733,11 +728,10 @@ export default function ServiceDetailsPage() {
                               <Star
                                 key={i}
                                 size={18}
-                                className={`${
-                                  i < Math.round(averageRating || 0)
+                                className={`${i < Math.round(averageRating || 0)
                                     ? "text-yellow-400 fill-yellow-400"
                                     : "text-gray-300"
-                                }`}
+                                  }`}
                               />
                             ))}
                           </div>
@@ -771,11 +765,10 @@ export default function ServiceDetailsPage() {
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={handleFilterByRating}
-                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                              filterRating
+                            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${filterRating
                                 ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
                                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
-                            }`}
+                              }`}
                           >
                             {filterRating ? `${filterRating} Stars` : "All Ratings"}
                           </button>
@@ -799,17 +792,11 @@ export default function ServiceDetailsPage() {
                               <div className="flex justify-between">
                                 <div className="flex items-start">
                                   <div className="w-12 h-12 overflow-hidden rounded-full bg-gray-200 mr-4 border-2 border-white shadow-sm">
-                                    {review.customerImage ? (
-                                      <img
-                                        src={review.customerImage || "/placeholder.svg"}
-                                        alt={review.customerName || "Customer"}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold">
-                                        {(review.customerName || "C").charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
+
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold">
+                                      {(review.customerName || "C").charAt(0).toUpperCase()}
+                                    </div>
+
                                   </div>
                                   <div>
                                     <h3 className="font-medium text-gray-900">{review.customerName || "Customer"}</h3>
@@ -818,11 +805,10 @@ export default function ServiceDetailsPage() {
                                         <Star
                                           key={i}
                                           size={14}
-                                          className={`${
-                                            i < Math.round(review.rating)
+                                          className={`${i < Math.round(review.rating)
                                               ? "text-yellow-400 fill-yellow-400"
                                               : "text-gray-300"
-                                          }`}
+                                            }`}
                                         />
                                       ))}
                                       <span className="ml-2 text-sm text-gray-500">
@@ -831,41 +817,8 @@ export default function ServiceDetailsPage() {
                                     </div>
                                   </div>
                                 </div>
-                                {/* Edit/Delete buttons for user's own reviews */}
-                                {user && review.customer?.id === user.id && (
-                                  <div className="flex space-x-1">
-                                    <button
-                                      onClick={() => handleEditReview(review)}
-                                      className="p-1 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-50"
-                                      title="Edit review"
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteReview(review.id)}
-                                      className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50"
-                                      title="Delete review"
-                                      disabled={isDeletingReview}
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                               <p className="mt-4 text-gray-700">{review.comment}</p>
-
-                              {/* Provider response if any */}
-                              {review.providerResponse && (
-                                <div className="mt-4 ml-12 pl-4 border-l-3 border-purple-300 bg-purple-50 p-3 rounded-r-lg">
-                                  <div className="flex items-center mb-1">
-                                    <MessageCircle size={16} className="text-purple-600 mr-2" />
-                                    <p className="text-sm font-medium text-purple-800">
-                                      Response from service provider
-                                    </p>
-                                  </div>
-                                  <p className="text-sm text-gray-700">{review.providerResponse}</p>
-                                </div>
-                              )}
                             </div>
                           ))
                         ) : (
@@ -880,6 +833,7 @@ export default function ServiceDetailsPage() {
                           </div>
                         )}
                       </div>
+
                     </div>
                   ) : (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -896,120 +850,6 @@ export default function ServiceDetailsPage() {
                     </div>
                   )}
 
-                  {/* Add review form */}
-                  {user ? (
-                    canReview || isEditingReview ? (
-                      <div className="mt-8">
-                        {showReviewForm ? (
-                          <div className="bg-gradient-to-br from-gray-50 to-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
-                            <h3 className="text-lg font-medium mb-4 text-gray-900">
-                              {isEditingReview ? "Edit Your Review" : "Write a Review"}
-                            </h3>
-                            <div className="mb-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
-                              <div className="flex bg-white p-2 rounded-md inline-block">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <button key={i} type="button" onClick={() => setUserRating(i + 1)} className="p-1">
-                                    <Star
-                                      size={28}
-                                      className={`${
-                                        i < userRating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                                      } transition-colors hover:scale-110 transform`}
-                                    />
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="mb-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
-                              <textarea
-                                value={userReview}
-                                onChange={(e) => setUserReview(e.target.value)}
-                                rows={4}
-                                placeholder="Share your experience with this service..."
-                                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                              <button
-                                onClick={handleSubmitReview}
-                                disabled={reviewLoading || userReview.trim() === ""}
-                                className={`px-6 py-2.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 
-                                  transition-colors ${reviewLoading || userReview.trim() === "" ? "opacity-50 cursor-not-allowed" : ""}`}
-                              >
-                                {reviewLoading ? (
-                                  <span className="flex items-center">
-                                    <svg
-                                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
-                                    {isEditingReview ? "Updating..." : "Submitting..."}
-                                  </span>
-                                ) : isEditingReview ? (
-                                  "Update Review"
-                                ) : (
-                                  "Submit Review"
-                                )}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowReviewForm(false)
-                                  setIsEditingReview(false)
-                                  setReviewToEditId(null)
-                                  setUserReview("")
-                                  setUserRating(5)
-                                }}
-                                className="px-6 py-2.5 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setShowReviewForm(true)}
-                            className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-md transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Star size={18} />
-                            Write a Review
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-8 p-4 bg-gray-50 rounded-lg text-center border border-gray-200">
-                        <p className="text-gray-600">
-                          {reviews.some((r) => r.customerId === user.id)
-                            ? "You've already reviewed this service"
-                            : "Book and complete this service to leave a review"}
-                        </p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="mt-8 p-5 bg-gray-50 rounded-lg text-center border border-gray-200">
-                      <p className="text-gray-600 mb-3">Please log in to review this service</p>
-                      <Link
-                        to="/login"
-                        className="inline-block px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                      >
-                        Log in
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1030,23 +870,16 @@ export default function ServiceDetailsPage() {
                   </span>
                 </div>
               </div>
-              {/* <LoyaltyStatusCard 
-                          customerId={user.id} 
-                          serviceProviderId={provider.id} 
-                          providerName={provider.companyName || provider.fullName || provider.username}
-                        /> */}
-                        
 
-                        {console.log(provider)};
               {user ? (
                 service.status === "APPROVED" ? (
                   <>
                     {/* Show loyalty status card when user is logged in */}
                     {provider && (
                       <div className="mb-4">
-                        <LoyaltyStatusCard 
-                          customerId={user.id} 
-                          serviceProviderId={provider.id} 
+                        <LoyaltyStatusCard
+                          customerId={user.id}
+                          serviceProviderId={provider.id}
                           providerName={provider.companyName || provider.fullName || provider.username}
                         />
                       </div>

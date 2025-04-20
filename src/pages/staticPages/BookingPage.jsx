@@ -9,13 +9,10 @@ import {
   FileText,
   Check,
   AlertCircle,
-  DollarSign,
   MapPin,
   User,
   ChevronRight,
-  Shield,
   RefreshCw,
-  XCircle,
   CheckCircle
 } from "lucide-react"
 import { getServiceById } from "../../services/providerServiceApi"
@@ -351,7 +348,6 @@ export default function BookingPage() {
 
                 <div className="mt-3 flex flex-wrap gap-4">
                   <div className="flex items-center text-gray-700">
-                    <DollarSign className="w-5 h-5 text-purple-600 mr-1" />
                     {isEligibleForDiscount ? (
                       <>
                         <span className="font-medium line-through text-gray-400 mr-2">Rs. {service.price.toFixed(2)}</span>
@@ -517,7 +513,8 @@ export default function BookingPage() {
 
                         <div className="space-y-2 text-sm text-gray-600">
                           <p>
-                            Name: <span className="font-medium text-gray-800">{provider.name}</span>
+                            {console.log(provider)}
+                            Name: <span className="font-medium text-gray-800">{provider.businessName}</span>
                           </p>
                           {provider.email && (
                             <p>
