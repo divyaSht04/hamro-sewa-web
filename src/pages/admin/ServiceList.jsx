@@ -45,6 +45,7 @@ const ServiceList = () => {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [pdfError, setPdfError] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [deletionReason, setDeletionReason] = useState("")
 
   const statuses = ["ALL", "PENDING", "APPROVED", "REJECTED"]
 
@@ -87,17 +88,24 @@ const ServiceList = () => {
 
   const confirmDelete = (id) => {
     setShowDeleteConfirm(id)
+    setDeletionReason("") // Reset deletion reason when opening modal
   }
 
   // Function to handle the actual service deletion
   const handleDelete = async (id) => {
     try {
-      // Call the API to delete the service
-      await deleteService(id)
+      // Call the API to delete the service with the admin-specific endpoint
+      // which sends email and notification with the reason
+      await deleteService(id, deletionReason)
+      
       // Update local state and show success message
       setServices(services.filter((service) => service.id !== id))
       setShowDeleteConfirm(null)
-      toast.success("Service deleted successfully")
+      setDeletionReason("") // Clear the reason field
+      
+      // Show a more detailed success message
+      toast.success("Service deleted successfully. Provider has been notified.")
+      
       // Refresh the services list to ensure it's up to date
       fetchServices()
     } catch (error) {
@@ -655,9 +663,23 @@ const ServiceList = () => {
             </div>
 
             <h3 className="text-xl font-bold text-center text-gray-800 mb-2">Confirm Deletion</h3>
-            <p className="text-gray-600 text-center mb-6">
-              Are you sure you want to delete this service? This action cannot be undone.
+            <p className="text-gray-600 text-center mb-4">
+              Are you sure you want to delete this service? This action cannot be undone and will notify the service provider.
             </p>
+            
+            <div className="mb-4">
+              <label htmlFor="deletionReason" className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for deletion (optional):
+              </label>
+              <textarea
+                id="deletionReason"
+                value={deletionReason}
+                onChange={(e) => setDeletionReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Provide a reason why this service is being deleted"
+                rows="3"
+              />
+            </div>
 
             <div className="flex gap-3">
               <button

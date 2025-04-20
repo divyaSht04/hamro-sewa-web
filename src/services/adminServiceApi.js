@@ -98,10 +98,12 @@ export const getServicePdfUrl = (serviceId) => {
  * @param {number} serviceId - The ID of the service to delete
  * @returns {Promise} A promise that resolves when the service is deleted
  */
-export const deleteService = async (serviceId) => {
+export const deleteService = async (serviceId, reason = '') => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/provider-services/${serviceId}`, {
-      headers: getAuthHeaders()
+    // Use the admin-specific endpoint which includes notification and email functionality
+    const response = await axios.delete(`${API_BASE_URL}/provider-services/admin/${serviceId}`, {
+      headers: getAuthHeaders(),
+      params: { reason } // Add the reason as a query parameter
     });
     return response.data;
   } catch (error) {

@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "../../auth/AuthContext"
 import { getCustomerBookings, cancelBooking, checkBookingReviewStatus } from "../../services/bookingService"
-import { createReview, updateReview, deleteReview, getCustomerReviews } from "../../services/reviewService"
+import { createReview, updateReview, deleteReview, getCustomerReviews, getReviewByBookingId } from "../../services/reviewService"
 import toast from "react-hot-toast"
 
 export default function CustomerBookings() {
@@ -58,8 +58,22 @@ export default function CustomerBookings() {
 
   const fetchUserReviews = async () => {
     try {
+      console.log('Fetching reviews for user ID:', user.id)
       const reviews = await getCustomerReviews(user.id)
+      console.log('Received user reviews:', reviews)
       setUserReviews(reviews || [])
+      
+      // Map reviews to bookings to ensure proper association
+      if (reviews && reviews.length > 0 && bookings.length > 0) {
+        const updatedBookings = bookings.map(booking => {
+          const matchingReview = reviews.find(review => 
+            review.bookingId === booking.id || 
+            review.booking?.id === booking.id
+          )
+          return matchingReview ? { ...booking, reviewData: matchingReview, isReviewed: true } : booking
+        })
+        setBookings(updatedBookings)
+      }
     } catch (err) {
       console.error("Error fetching user reviews:", err)
     }
@@ -152,19 +166,40 @@ export default function CustomerBookings() {
     setShowReviewModal(true)
     
     if (isEditing) {
-      const existingReview = userReviews.find(review => review.booking?.id === booking.id)
-      if (existingReview) {
-        console.log('Found existing review:', existingReview)
-        setReviewText(existingReview.comment || "")
-        setReviewRating(existingReview.rating || 5)
-        setExistingReviewId(existingReview.id)
-        setIsEditingReview(true)
-      }
+      // When editing, immediately use the new API to fetch the review directly by booking ID
+      // This is the most reliable method and bypasses any serialization issues
+      console.log('Edit mode - fetching review directly by booking ID:', booking.id)
+      setIsEditingReview(true) // Set this early so the modal shows "Edit Your Review" title
+      fetchReviewForBooking(booking.id)
     } else {
+      // For new reviews, just reset the form
       setReviewText("")
       setReviewRating(5)
       setExistingReviewId(null)
       setIsEditingReview(false)
+    }
+  }
+
+    // Function to fetch a review for a specific booking ID using the new API endpoint
+  const fetchReviewForBooking = async (bookingId) => {
+    try {
+      console.log('Attempting to fetch review directly for booking ID:', bookingId)
+      // Use our new direct API endpoint to get the review by booking ID
+      const review = await getReviewByBookingId(bookingId)
+      
+      if (review) {
+        console.log('Successfully found review using booking ID API:', review)
+        setReviewText(review.comment || "")
+        setReviewRating(review.rating || 5)
+        setExistingReviewId(review.id)
+        setIsEditingReview(true)
+      } else {
+        console.error('Review data was empty for booking ID:', bookingId)
+        toast.error('Could not find your review. Please try refreshing the page.')
+      }
+    } catch (error) {
+      console.error('Error fetching review for booking:', error)
+      toast.error('Could not retrieve your review: ' + (error.response?.data || error.message))
     }
   }
 
@@ -277,18 +312,6 @@ export default function CustomerBookings() {
   }
 
   const handleDeleteReview = async (booking) => {
-    // Find review in userReviews array - try multiple ways to match the booking
-    const reviewToDelete = userReviews.find(review => 
-      (review.booking?.id === booking.id) || 
-      (review.bookingId === booking.id)
-    )
-    
-    if (!reviewToDelete) {
-      console.error('Review not found for booking:', booking)
-      toast.error("Review not found")
-      return
-    }
-    
     if (!window.confirm("Are you sure you want to delete this review?")) {
       return
     }
@@ -296,35 +319,74 @@ export default function CustomerBookings() {
     setIsDeletingReview(true)
     
     try {
-      // Ensure we have valid IDs when calling deleteReview
-      if (!reviewToDelete.id || !user?.id) {
-        throw new Error('Missing required IDs for deletion')
+      // First try to get the review directly from the booking if we have a reviewData property
+      let reviewId = null;
+      
+      if (booking.reviewData?.id) {
+        reviewId = booking.reviewData.id;
+      } else {
+        // Otherwise, fetch the review directly from the API
+        try {
+          const review = await getReviewByBookingId(booking.id);
+          reviewId = review.id;
+        } catch (err) {
+          // If we can't get it from the API, try the local reviews array
+          const reviewToDelete = userReviews.find(review => 
+            (review.booking?.id === booking.id) || 
+            (review.bookingId === booking.id)
+          );
+          
+          if (reviewToDelete) {
+            reviewId = reviewToDelete.id;
+          }
+        }
       }
       
-      await deleteReview(reviewToDelete.id, user.id)
+      if (!reviewId) {
+        throw new Error('Could not determine review ID for deletion');
+      }
       
-      // Update local state
-      setUserReviews(userReviews.filter(review => review.id !== reviewToDelete.id))
+      // Now we have the ID, we can delete the review
+      await deleteReview(reviewId, user.id);
       
+      // Update local state - remove from userReviews array
+      setUserReviews(userReviews.filter(review => review.id !== reviewId));
+      
+      // Update the bookings array to reflect the deleted review
       const updatedBookings = bookings.map(b => 
         b.id === booking.id 
-          ? { ...b, isReviewed: false } 
+          ? { ...b, isReviewed: false, reviewData: null } 
           : b
-      )
-      setBookings(updatedBookings)
-      toast.success("Review deleted successfully")
+      );
+      setBookings(updatedBookings);
+      toast.success("Review deleted successfully");
     } catch (error) {
-      console.error("Error deleting review:", error)
-      toast.error("Failed to delete review: " + (error.response?.data || error.message || 'Unknown error'))
+      console.error("Error deleting review:", error);
+      toast.error("Failed to delete review: " + (error.response?.data || error.message || 'Unknown error'));
     } finally {
-      setIsDeletingReview(false)
+      setIsDeletingReview(false);
     }
   }
 
   const getBookingReviewStatus = (booking) => {
     if (booking.status !== "COMPLETED") return null
+    
+    // First check if booking has review data directly attached
+    if (booking.reviewData) {
+      return booking.reviewData
+    }
+    
+    // Otherwise check if it's marked as reviewed
     if (booking.isReviewed) return true
-    const review = userReviews.find(review => review.booking?.id === booking.id)
+
+    // Try multiple ways to find the review for this booking
+    const review = userReviews.find(review => 
+      review.booking?.id === booking.id || 
+      review.bookingId === booking.id ||
+      (review.booking && String(review.booking) === String(booking.id))
+    )
+
+    console.log(`Checking review status for booking ${booking.id}:`, review ? 'Found' : 'Not found')
     return review
   }
 
@@ -468,6 +530,7 @@ export default function CustomerBookings() {
                     <Calendar className="h-6 w-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
+                    {console.log(booking)}
                     <h3 className="text-lg font-medium text-gray-900">
                       {booking?.providerService?.serviceName || "Unnamed Service"}
                     </h3>

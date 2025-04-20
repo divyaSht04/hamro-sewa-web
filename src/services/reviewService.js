@@ -102,3 +102,19 @@ export const getCustomerReviews = async (customerId) => {
     throw error;
   }
 };
+
+// Get a review by booking ID
+export const getReviewByBookingId = async (bookingId) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/reviews/booking/${bookingId}`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching review by booking ID:', error.response?.data || error.message);
+    throw error;
+  }
+};
