@@ -99,6 +99,7 @@ export const getProviderBookings = async (providerId) => {
         headers: getAuthHeaders()
       }
     );
+    console.log('Provider bookings response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching provider bookings:', error.response?.data || error.message);

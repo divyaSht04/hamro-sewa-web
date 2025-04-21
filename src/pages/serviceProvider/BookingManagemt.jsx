@@ -1,26 +1,29 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Calendar,
   Clock,
-  MapPin,
-  User,
   Phone,
   Mail,
-  FileText,
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Filter,
   Search,
-  ChevronDown,
-  MessageSquare,
-  DollarSign,
   CalendarCheck,
   X,
   Eye,
+  Filter,
+  ChevronDown,
+  FileText,
+  User,
+  DollarSign,
+  MapPin,
+  RefreshCw,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { useAuth } from "../../auth/AuthContext"
@@ -43,20 +46,26 @@ function BookingManagement() {
   const [responseComment, setResponseComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [bookingsPerPage, setBookingsPerPage] = useState(5)
+
+  const statuses = ["all", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]
 
   useEffect(() => {
     fetchBookings()
   }, [user?.id])
 
   const fetchBookings = async () => {
-    if (!user?.id) return;
-    
+    if (!user?.id) return
+
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const data = await getProviderBookings(user.id)
-      console.log('Provider bookings:', data)
+      console.log("Provider bookings:", data)
       setBookings(data || [])
       setFilteredBookings(data || [])
     } catch (err) {
@@ -82,10 +91,14 @@ function BookingManagement() {
       const searchLower = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (booking) =>
-          (booking.customer?.firstName?.toLowerCase()?.includes(searchLower) || '') ||
-          (booking.customer?.lastName?.toLowerCase()?.includes(searchLower) || '') ||
-          (booking.providerService?.serviceName?.toLowerCase()?.includes(searchLower) || '') ||
-          (booking.id?.toString()?.includes(searchLower) || '')
+          booking.customer?.firstName?.toLowerCase()?.includes(searchLower) ||
+          "" ||
+          booking.customer?.lastName?.toLowerCase()?.includes(searchLower) ||
+          "" ||
+          booking.providerService?.serviceName?.toLowerCase()?.includes(searchLower) ||
+          "" ||
+          booking.id?.toString()?.includes(searchLower) ||
+          "",
       )
     }
 
@@ -130,168 +143,88 @@ function BookingManagement() {
   }
 
   const handleStatusUpdate = async () => {
-    if (!selectedBooking || !responseType) return;
-    
-    setIsSubmitting(true);
-    
+    if (!selectedBooking || !responseType) return
+
+    setIsSubmitting(true)
+
     try {
-      let success = false;
-      
+      let success = false
+
       // Check if this is a loyalty discounted booking being cancelled
-      const isLoyaltyDiscountRejection = responseType === 'CANCELLED' && selectedBooking.discountApplied;
-      
-      if (responseType === 'CANCELLED') {
-        success = await cancelBooking(
-          selectedBooking.id,
-          responseComment,
-          isLoyaltyDiscountRejection
-        );
+      const isLoyaltyDiscountRejection = responseType === "CANCELLED" && selectedBooking.discountApplied
+
+      if (responseType === "CANCELLED") {
+        success = await cancelBooking(selectedBooking.id, responseComment, isLoyaltyDiscountRejection)
       } else {
-        success = await updateBookingStatus(
-          selectedBooking.id,
-          responseType,
-          responseComment
-        );
+        success = await updateBookingStatus(selectedBooking.id, responseType, responseComment)
       }
-      
+
       if (success) {
-        toast.success(`Booking ${responseType.toLowerCase()} successfully`);
+        toast.success(`Booking ${responseType.toLowerCase()} successfully`)
         if (isLoyaltyDiscountRejection) {
-          toast.info('Customer can still use their loyalty discount on another service from you');
+          toast.info("Customer can still use their loyalty discount on another service from you")
         }
-        closeResponseModal();
-        await fetchBookings(); // Refresh the bookings list
+        closeResponseModal()
+        await fetchBookings() // Refresh the bookings list
       }
     } catch (err) {
-      console.error("Error updating booking status:", err);
-      const errorMessage = err.response?.data?.message || 
-                         err.response?.data || 
-                         "Failed to update booking status. Please try again.";
-      toast.error(errorMessage);
+      console.error("Error updating booking status:", err)
+      const errorMessage =
+        err.response?.data?.message || err.response?.data || "Failed to update booking status. Please try again."
+      toast.error(errorMessage)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
-
-  const renderResponseModal = () => {
-    if (!showResponseModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">
-              {responseType === 'CANCELLED' ? 'Reject Booking' : 
-               responseType === 'CONFIRMED' ? 'Confirm Booking' : 
-               'Complete Booking'}
-            </h3>
-            <button
-              onClick={closeResponseModal}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Add a comment (optional)
-            </label>
-            <textarea
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              rows="3"
-              value={responseComment}
-              onChange={(e) => setResponseComment(e.target.value)}
-              placeholder={responseType === 'CANCELLED' ? 
-                "Explain why you're rejecting this booking..." : 
-                "Add any additional notes..."}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={closeResponseModal}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleStatusUpdate}
-              className={`px-4 py-2 rounded-md text-sm font-medium text-white ${
-                responseType === 'CANCELLED'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </span>
-              ) : responseType === 'CANCELLED' ? (
-                'Reject Booking'
-              ) : responseType === 'CONFIRMED' ? (
-                'Confirm Booking'
-              ) : (
-                'Complete Booking'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  }
 
   const formatDateTime = (dateTimeStr) => {
-    if (!dateTimeStr) return "No date provided";
-    
+    if (!dateTimeStr) return "No date provided"
+
     try {
       // Use our utility function to properly parse array or string dates
-      const dateObj = parseDate(dateTimeStr);
-      return format(dateObj, "MMM d, yyyy 'at' h:mm a");
+      const dateObj = parseDate(dateTimeStr)
+      return format(dateObj, "MMM d, yyyy 'at' h:mm a")
     } catch (error) {
-      console.error("Date formatting error:", error);
-      return "Invalid date";
+      console.error("Date formatting error:", error)
+      return "Invalid date"
     }
   }
 
   const getStatusBadge = (status) => {
-    if (!status) return null;
-    
+    if (!status) return null
+
     switch (status) {
       case "PENDING":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock size={12} className="mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+            <Clock size={12} className="mr-1.5" />
             Pending
           </span>
         )
       case "CONFIRMED":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <CheckCircle size={12} className="mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+            <CheckCircle size={12} className="mr-1.5" />
             Confirmed
           </span>
         )
       case "COMPLETED":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle size={12} className="mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+            <CheckCircle size={12} className="mr-1.5" />
             Completed
           </span>
         )
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle size={12} className="mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+            <XCircle size={12} className="mr-1.5" />
             Cancelled
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
             {status}
           </span>
         )
@@ -299,374 +232,701 @@ function BookingManagement() {
   }
 
   const getCustomerFullName = (customer) => {
-    if (!customer) return 'Unknown Customer';
+    if (!customer) return "Unknown Customer"
     
-    const firstName = customer.firstName || '';
-    const lastName = customer.lastName || '';
+    // If we're passed the fullName directly
+    if (typeof customer === 'string') {
+      return customer || "Unknown Customer"
+    }
     
-    return `${firstName} ${lastName}`.trim() || 'Unknown Customer';
+    // Otherwise extract from customer object
+    if (customer.fullName) {
+      return customer.fullName
+    }
+    
+    const firstName = customer.firstName || ""
+    const lastName = customer.lastName || ""
+    
+    return `${firstName} ${lastName}`.trim() || "Unknown Customer"
   }
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-yellow-50 border-yellow-100"
+      case "CONFIRMED":
+        return "bg-blue-50 border-blue-100"
+      case "COMPLETED":
+        return "bg-green-50 border-green-100"
+      case "CANCELLED":
+        return "bg-red-50 border-red-100"
+      default:
+        return "bg-gray-50 border-gray-100"
+    }
+  }
+
+  // Update the renderBookingsList function to include pagination
   const renderBookingsList = () => {
     if (isLoading) {
       return (
-        <div className="py-12 flex justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="py-16 flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-500 animate-pulse">Loading bookings...</p>
         </div>
-      );
+      )
     }
 
     if (error) {
       return (
-        <div className="text-center py-12">
+        <div className="text-center py-16 px-4">
           <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
-          <h3 className="text-lg font-medium text-red-800">{error}</h3>
-          <button 
+          <h3 className="text-lg font-medium text-red-800 mb-2">{error}</h3>
+          <p className="text-red-600 mb-6">We couldn't load your bookings at this time.</p>
+          <button
             onClick={fetchBookings}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors inline-flex items-center"
           >
+            <RefreshCw size={16} className="mr-2" />
             Try Again
           </button>
         </div>
-      );
+      )
     }
 
     if (filteredBookings.length === 0) {
       return (
-        <div className="text-center py-12">
+        <div className="text-center py-16 px-4">
           <CalendarCheck size={48} className="mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">No bookings found</h3>
-          <p className="text-gray-500 mt-2">
-            {statusFilter !== "all" 
-              ? `You don't have any ${statusFilter.toLowerCase()} bookings.` 
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            {statusFilter !== "all"
+              ? `You don't have any ${statusFilter.toLowerCase()} bookings.`
               : "You don't have any bookings yet."}
           </p>
+          {statusFilter !== "all" && (
+            <button
+              onClick={() => setStatusFilter("all")}
+              className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors inline-flex items-center"
+            >
+              <Filter size={16} className="mr-2" />
+              Clear Filters
+            </button>
+          )}
         </div>
-      );
+      )
     }
 
+    // Calculate pagination
+    const indexOfLastBooking = currentPage * bookingsPerPage
+    const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage
+    const currentBookings = filteredBookings.slice(indexOfFirstBooking, indexOfLastBooking)
+    const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage)
+
     return (
-      <div className="overflow-hidden">
-        <div className="align-middle inline-block min-w-full">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Service
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {booking.providerService?.serviceName || "Unknown Service"}
-                          </div>
-                          <div className="text-sm text-gray-500">Booking #{booking.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{getCustomerFullName(booking.customer)}</div>
-                      <div className="text-sm text-gray-500">{booking.customer?.email || "No email provided"}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDateTime(booking.bookingDateTime)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {booking?.discountApplied ? (
-                        <div className="flex flex-col">
-                          <div className="flex items-center">
-                            <span className="line-through text-gray-400 mr-1">Rs. {booking.originalPrice?.toFixed(2)}</span>
-                            <span className="text-green-600 font-medium">Rs. {booking.discountedPrice?.toFixed(2)}</span>
-                          </div>
-                          <div className="text-xs mt-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full inline-block w-fit">
-                            Loyalty discount applied
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          Rs. {booking.originalPrice?.toFixed(2) || booking.providerService?.price?.toFixed(2)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(booking.status)}
-                      {booking.statusComment && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          {booking.statusComment}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => handleViewBooking(booking)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="View Details"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        {booking.status === "PENDING" && (
-                          <>
-                            <button
-                              onClick={() => openResponseModal(booking, "CONFIRMED")}
-                              className="text-green-600 hover:text-green-900"
-                              title="Confirm Booking"
-                            >
-                              <CheckCircle size={18} />
-                            </button>
-                            <button
-                              onClick={() => openResponseModal(booking, "CANCELLED")}
-                              className="text-red-600 hover:text-red-900"
-                              title="Reject Booking"
-                            >
-                              <XCircle size={18} />
-                            </button>
-                          </>
-                        )}
-                        {booking.status === "CONFIRMED" && (
-                          <button
-                            onClick={() => openResponseModal(booking, "COMPLETED")}
-                            className="text-green-600 hover:text-green-900"
-                            title="Mark as Completed"
-                          >
-                            <CalendarCheck size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <ServiceProviderLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4 md:mb-0">Booking Management</h1>
-          
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto">
-            <div className="relative rounded-md shadow-sm">
-              <input
-                type="text"
-                placeholder="Search bookings..."
-                className="form-input py-2 px-3 block w-full leading-5 rounded-md transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-gray-300"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-            
-            <div className="relative">
-              <select
-                className="form-select py-2 px-3 block w-full leading-5 rounded-md transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-gray-300"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
-            
-            <div className="relative">
-              <select
-                className="form-select py-2 px-3 block w-full leading-5 rounded-md transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-gray-300"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="date-desc">Newest First</option>
-                <option value="date-asc">Oldest First</option>
-                <option value="created-desc">Recently Created</option>
-                <option value="created-asc">Oldest Created</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {renderBookingsList()}
-        </div>
-
-        {/* Booking Details Modal */}
-        {selectedBooking && !showResponseModal && (
-          <div className="fixed inset-0 z-10 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 transition-opacity">
-                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-              </div>
-              <span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>&#8203;
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-2">
-                      Booking Details
-                    </h3>
-                    <button
-                      onClick={closeBookingDetails}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                  
-                  <div className="mt-4 space-y-4">
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Service</span>
-                      <span className="text-sm font-medium">
-                        {selectedBooking.providerService?.serviceName || "Unknown Service"}
-                      </span>
+      <>
+        <div className="grid gap-4">
+          {currentBookings.map((booking) => (
+            <motion.div
+              key={booking.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className={`p-4 rounded-lg border shadow-sm hover:shadow-md transition-all ${getStatusColor(booking.status)}`}
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-start">
+                    <div className="hidden sm:flex h-10 w-10 rounded-full bg-white items-center justify-center mr-3 shadow-sm">
+                      <Calendar className="h-5 w-5 text-blue-600" />
                     </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Price</span>
-                      <span className="text-sm font-medium">
+                    <div>
+                      <div className="flex items-center flex-wrap gap-2">
+                        <h3 className="text-base font-medium text-gray-900">
+                          {booking.providerService?.serviceName || "Unknown Service"}
+                        </h3>
+                        {getStatusBadge(booking.status)}
+                      </div>
+                      <div className="mt-1 flex items-center text-sm text-gray-500">
+                        <User size={14} className="mr-1.5" />
+                        <span>{getCustomerFullName(booking.customer)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center text-sm text-gray-500">
+                        <Clock size={14} className="mr-1.5" />
+                        <span>{formatDateTime(booking.bookingDateTime)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                  <div className="flex items-center mr-4">
+                    {booking?.discountApplied ? (
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center">
+                          <span className="line-through text-gray-400 mr-1 text-sm">
+                            Rs. {booking.originalPrice?.toFixed(2)}
+                          </span>
+                          <span className="text-green-600 font-medium">Rs. {booking.discountedPrice?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          Loyalty discount
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="font-medium">
+                        Rs. {booking.originalPrice?.toFixed(2) || booking.providerService?.price?.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewBooking(booking)}
+                      className="px-3 py-1.5 bg-white text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors inline-flex items-center shadow-sm"
+                    >
+                      <Eye size={16} className="mr-1.5" />
+                      Details
+                    </button>
+
+                    {booking.status === "PENDING" && (
+                      <>
+                        <button
+                          onClick={() => openResponseModal(booking, "CONFIRMED")}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors inline-flex items-center shadow-sm"
+                        >
+                          <CheckCircle size={16} className="mr-1.5" />
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => openResponseModal(booking, "CANCELLED")}
+                          className="px-3 py-1.5 bg-red-100 text-red-600 border border-red-200 rounded-md hover:bg-red-200 transition-colors inline-flex items-center shadow-sm"
+                        >
+                          <XCircle size={16} className="mr-1.5" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+
+                    {booking.status === "CONFIRMED" && (
+                      <button
+                        onClick={() => openResponseModal(booking, "COMPLETED")}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors inline-flex items-center shadow-sm"
+                      >
+                        <CalendarCheck size={16} className="mr-1.5" />
+                        Complete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {filteredBookings.length > bookingsPerPage && (
+          <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-lg shadow-sm">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`flex items-center px-3 py-1 rounded-md ${
+                currentPage === 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-blue-600 hover:bg-blue-50 border border-blue-200"
+              }`}
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                    currentPage === page ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className={`flex items-center px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-blue-600 hover:bg-blue-50 border border-blue-200"
+              }`}
+            >
+              Next
+              <ChevronRight size={16} className="ml-1" />
+            </button>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  // Fixed booking details modal with proper event handling
+  const renderBookingDetailsModal = () => {
+    if (!selectedBooking) return null
+
+    return (
+      <div className="fixed inset-0 z-[100] overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          {/* Backdrop - click to close */}
+          <div 
+            className="fixed inset-0 transition-opacity" 
+            aria-hidden="true" 
+            onClick={closeBookingDetails}
+          >
+            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          </div>
+
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+            &#8203;
+          </span>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[110]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">Booking Details</h3>
+              <button
+                onClick={closeBookingDetails}
+                className="text-white hover:text-gray-200 focus:outline-none p-1 rounded-full hover:bg-white/10"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 bg-gray-50">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Booking #{selectedBooking.id}</h4>
+                    <div className="mt-1">{getStatusBadge(selectedBooking.status)}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Created</div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(selectedBooking.createdAt || selectedBooking.bookingDateTime)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Service Details */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Details</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                        <FileText size={20} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedBooking.providerService?.serviceName || "Unknown Service"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      Rs
+                      <div className="ml-3">
                         {selectedBooking?.discountApplied ? (
                           <div className="flex flex-col">
                             <div className="flex items-center">
-                              <span className="line-through text-gray-400 mr-1">Rs. {selectedBooking.originalPrice?.toFixed(2)}</span>
-                              <span className="text-green-600 font-medium">Rs. {selectedBooking.discountedPrice?.toFixed(2)}</span>
+                              <span className="line-through text-gray-400 mr-1">
+                                 Rs. {selectedBooking.originalPrice?.toFixed(2)}
+                              </span>
+                              <span className="text-green-600 font-medium">
+                                 Rs. {selectedBooking.discountedPrice?.toFixed(2)}
+                              </span>
                             </div>
-                            <div className="text-xs mt-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full inline-block w-fit">
+                            <div className="text-xs mt-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full inline-block">
                               Loyalty discount applied
                             </div>
                           </div>
                         ) : (
-                          <div>
-                            Rs. {selectedBooking.originalPrice?.toFixed(2) || selectedBooking.providerService?.price?.toFixed(2)}
-                          </div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {" "}
+                            {selectedBooking.originalPrice?.toFixed(2) ||
+                              selectedBooking.providerService?.price?.toFixed(2)}
+                          </p>
                         )}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Status</span>
-                      <span className="text-sm font-medium">
-                        {getStatusBadge(selectedBooking.status)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Customer</span>
-                      <span className="text-sm font-medium">
-                        {getCustomerFullName(selectedBooking.customer)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Contact Information</span>
-                      <div className="flex items-center text-sm">
-                        <Mail size={14} className="mr-1 text-gray-400" />
-                        <span>{selectedBooking.customer?.email || "No email provided"}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Phone size={14} className="mr-1 text-gray-400" />
-                        <span>{selectedBooking.customer?.phone || "No phone provided"}</span>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Booking Date & Time</span>
-                      <div className="flex items-center text-sm">
-                        <Calendar size={14} className="mr-1 text-gray-400" />
-                        <span>{formatDateTime(selectedBooking.bookingDateTime)}</span>
+
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                        <Clock size={20} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-gray-900">{formatDateTime(selectedBooking.bookingDateTime)}</p>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-sm text-gray-500">Notes</span>
-                      <p className="text-sm">
-                        {selectedBooking.customerNotes || "No notes provided"}
-                      </p>
-                    </div>
-                    
-                    {selectedBooking.providerResponse && (
-                      <div className="flex flex-col space-y-1">
-                        <span className="text-sm text-gray-500">Provider Response</span>
-                        <p className="text-sm">
-                          {selectedBooking.providerResponse}
+                  </div>
+                </div>
+
+                {/* Customer Details */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Customer Details
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                        <User size={20} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {getCustomerFullName(selectedBooking.customer)}
                         </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                        <Mail size={20} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-gray-900">
+                          {selectedBooking.customer?.email || "No email provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                        <Phone size={20} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-gray-900">
+                          {console.log(selectedBooking)}
+                          {selectedBooking.customer?.phoneNumber || "No phone provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedBooking.customer?.address && (
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 h-5 w-5 text-gray-400 mt-0.5">
+                          <MapPin size={20} />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-gray-900">{selectedBooking.customer.address}</p>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  {selectedBooking.status === "PENDING" && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          closeBookingDetails()
-                          openResponseModal(selectedBooking, "CONFIRMED")
-                        }}
-                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          closeBookingDetails()
-                          openResponseModal(selectedBooking, "CANCELLED")
-                        }}
-                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                      >
-                        Reject
-                      </button>
-                    </>
+              </div>
+
+              {/* Notes Section */}
+              {(selectedBooking.customerNotes || selectedBooking.providerResponse) && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Notes & Comments
+                  </h4>
+
+                  {selectedBooking.customerNotes && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-3">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 h-5 w-5 text-blue-500 mt-0.5">
+                          <MessageSquare size={20} />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900 mb-1">Customer Notes</p>
+                          <p className="text-sm text-gray-700">{selectedBooking.customerNotes}</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {selectedBooking.status === "CONFIRMED" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeBookingDetails()
-                        openResponseModal(selectedBooking, "COMPLETED")
-                      }}
-                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
-                    >
-                      Mark as Completed
-                    </button>
+
+                  {selectedBooking.providerResponse && (
+                    <div className="bg-green-50 border border-green-100 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 h-5 w-5 text-green-500 mt-0.5">
+                          <MessageSquare size={20} />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900 mb-1">Your Response</p>
+                          <p className="text-sm text-gray-700">{selectedBooking.providerResponse}</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
             </div>
-          </div>
-        )}
 
-        {renderResponseModal()}
+            {/* Action Buttons */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              {selectedBooking.status === "PENDING" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeBookingDetails()
+                      openResponseModal(selectedBooking, "CONFIRMED")
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    Confirm Booking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeBookingDetails()
+                      openResponseModal(selectedBooking, "CANCELLED")
+                    }}
+                    className="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                  >
+                    Reject Booking
+                  </button>
+                </>
+              )}
+
+              {selectedBooking.status === "CONFIRMED" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeBookingDetails()
+                    openResponseModal(selectedBooking, "COMPLETED")
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                >
+                  Mark as Completed
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={closeBookingDetails}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderResponseModal = () => {
+    if (!selectedBooking || !responseType) return null
+
+    const isConfirmation = responseType === "CONFIRMED"
+    const isCancellation = responseType === "CANCELLED"
+    const isCompletion = responseType === "COMPLETED"
+
+    const title = isConfirmation ? "Confirm Booking" : isCancellation ? "Reject Booking" : "Complete Booking"
+    const description = isConfirmation
+      ? "Are you sure you want to confirm this booking?"
+      : isCancellation
+        ? "Are you sure you want to reject this booking?"
+        : "Are you sure you want to mark this booking as completed?"
+    const confirmButtonText = isConfirmation
+      ? "Confirm Booking"
+      : isCancellation
+        ? "Reject Booking"
+        : "Mark as Completed"
+
+    return (
+      <div className="fixed inset-0 z-[200] overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <div 
+            className="fixed inset-0 transition-opacity" 
+            aria-hidden="true" 
+            onClick={closeResponseModal}
+          >
+            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          </div>
+
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+            &#8203;
+          </span>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[210]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">{title}</h3>
+              <button onClick={closeResponseModal} className="text-white hover:text-gray-200 focus:outline-none">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <p className="text-gray-700">{description}</p>
+
+              {isCancellation && (
+                <div className="mt-4">
+                  <label htmlFor="responseComment" className="block text-sm font-medium text-gray-700">
+                    Rejection Reason (Optional):
+                  </label>
+                  <div className="mt-1">
+                    <textarea
+                      id="responseComment"
+                      rows={3}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Please provide a reason for rejecting this booking..."
+                      value={responseComment}
+                      onChange={(e) => setResponseComment(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                type="button"
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={closeResponseModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+                onClick={handleStatusUpdate}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : confirmButtonText}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ServiceProviderLayout>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header with title and filters */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+            <h1 className="text-2xl font-bold text-white">Booking Management</h1>
+            <p className="text-blue-100 mt-1">Manage and respond to your service bookings</p>
+          </div>
+
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search by customer name or service..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              </div>
+
+              <button
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className="flex items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <Filter size={16} className="mr-2 text-gray-500" />
+                Filters
+                <ChevronDown
+                  size={16}
+                  className={`ml-2 transition-transform duration-200 ${isFiltersOpen ? "transform rotate-180" : ""}`}
+                />
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {isFiltersOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
+                      <div className="flex flex-wrap gap-2">
+                        {statuses.map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => setStatusFilter(status)}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                              statusFilter === status
+                                ? status === "PENDING"
+                                  ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                  : status === "CONFIRMED"
+                                    ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                    : status === "COMPLETED"
+                                      ? "bg-green-100 text-green-800 border border-green-200"
+                                      : status === "CANCELLED"
+                                        ? "bg-red-100 text-red-800 border border-red-200"
+                                        : "bg-purple-100 text-purple-800 border border-purple-200"
+                                : "bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200"
+                            }`}
+                          >
+                            {status === "all" ? "All Statuses" : status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                      >
+                        <option value="date-desc">Date (Newest First)</option>
+                        <option value="date-asc">Date (Oldest First)</option>
+                        <option value="created-desc">Created (Newest First)</option>
+                        <option value="created-asc">Created (Oldest First)</option>
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Bookings List */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden p-6">{renderBookingsList()}</div>
+
+        {/* Modals */}
+        <AnimatePresence>
+          {selectedBooking && !showResponseModal && renderBookingDetailsModal()}
+          {showResponseModal && renderResponseModal()}
+        </AnimatePresence>
       </div>
     </ServiceProviderLayout>
   )
 }
 
-export default BookingManagement;
+export default BookingManagement
