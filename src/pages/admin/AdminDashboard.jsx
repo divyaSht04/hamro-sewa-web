@@ -1,71 +1,96 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import {
   Users,
   Briefcase,
   DollarSign,
   Star,
-  ArrowUp,
-  ArrowDown,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
+  Loader,
 } from "lucide-react"
 import AdminLayout from "../../components/admin/AdminLayout"
 import AdminNotificationsWidget from "../../components/admin/AdminNotificationsWidget"
+import { getAdminDashboardMetrics } from "../../services/adminService"
 
-const StatCard = ({ title, value, icon: Icon, change, changeType, color }) => (
+const StatCard = ({ title, value, icon: Icon, color, isLoading }) => (
   <div className="bg-white rounded-lg shadow p-6">
     <div className="flex items-center justify-between mb-4">
       <div className={`p-3 rounded-lg ${color}`}>
         <Icon className="w-6 h-6 text-white" />
       </div>
-      <div className={`flex items-center ${changeType === "increase" ? "text-green-500" : "text-red-500"}`}>
-        {changeType === "increase" ? <ArrowUp size={20} className="mr-1" /> : <ArrowDown size={20} className="mr-1" />}
-        <span>{change}%</span>
-      </div>
     </div>
     <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
-    <p className="text-3xl font-bold text-gray-800 mt-2">{value}</p>
+    {isLoading ? (
+      <div className="flex items-center justify-center h-10 mt-2">
+        <Loader className="w-6 h-6 text-gray-400 animate-spin" />
+      </div>
+    ) : (
+      <p className="text-3xl font-bold text-gray-800 mt-2">{value}</p>
+    )}
   </div>
 )
 
 // AdminNotificationsWidget component replaces the RecentActivity component
 
 const AdminDashboard = () => {
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboardMetrics = async () => {
+      try {
+        setLoading(true);
+        const data = await getAdminDashboardMetrics();
+        setMetrics(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching dashboard metrics:', err);
+        setError('Failed to load dashboard metrics. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardMetrics();
+  }, []);
+
+  // Format currency with commas and 2 decimal places
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'NPR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Format ratings to 1 decimal place
+  const formatRating = (rating) => {
+    return rating.toFixed(1);
+  };
 
   const stats = [
     {
       title: "Total Users",
-      value: "1,234",
+      value: metrics ? metrics.totalUsers.toLocaleString() : '0',
       icon: Users,
-      change: "12",
-      changeType: "increase",
       color: "bg-[#3366FF]",
     },
     {
-      title: "Active Services",
-      value: "56",
+      title: "Total Service Providers",
+      value: metrics ? metrics.totalServiceProviders.toLocaleString() : '0',
       icon: Briefcase,
-      change: "8",
-      changeType: "increase",
       color: "bg-green-500",
     },
     {
       title: "Total Revenue",
-      value: "$12,345",
+      value: metrics ? formatCurrency(metrics.totalRevenue) : '₨0.00',
       icon: DollarSign,
-      change: "5",
-      changeType: "decrease",
       color: "bg-yellow-500",
     },
     {
       title: "Avg. Rating",
-      value: "4.8",
+      value: metrics ? formatRating(metrics.averageRating) : '0.0',
       icon: Star,
-      change: "2",
-      changeType: "increase",
       color: "bg-purple-500",
     },
   ]
@@ -76,9 +101,15 @@ const AdminDashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
+            <StatCard key={index} {...stat} isLoading={loading} />
           ))}
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Admin Notifications */}

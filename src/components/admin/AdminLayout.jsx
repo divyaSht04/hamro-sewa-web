@@ -86,14 +86,7 @@ const AdminLayout = ({ children }) => {
             </button>
             <h1 className="text-xl font-semibold text-gray-800">Admin Dashboard</h1>
             <div className="flex items-center space-x-4">
-              <button className="text-gray-500 hover:text-gray-600">
-                <Bell size={20} />
-              </button>
-              <img
-                className="h-8 w-8 rounded-full"
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt="Admin"
-              />
+              {/* Removed notification bell and profile picture */}
             </div>
           </div>
         </header>

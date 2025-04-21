@@ -19,12 +19,20 @@ import {
   BarChart2,
   TrendingUp,
   Briefcase,
+  Loader,
 } from "lucide-react"
 import ServiceProviderLayout from "../../components/serviceProvider/ServiceProviderLayout"
 import { useAuth } from "../../auth/AuthContext"
 import { Link } from "react-router-dom"
 import toast from "react-hot-toast"
 import NotificationsWidget from "../../components/serviceProvider/NotificationsWidget"
+import { 
+  getDashboardMetrics, 
+  getPerformanceMetrics, 
+  getMonthlyEarnings,
+  getClientGrowth,
+  getServicePopularity 
+} from "../../services/serviceProviderService"
 
 const StatCard = ({ title, value, icon: Icon, change, changeType, color, bgColor }) => (
   <motion.div
@@ -87,97 +95,109 @@ const RecentActivity = ({ type, message, time, status }) => {
 
 export function ServiceProviderDashboard() {
   const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState([
     {
       title: "Total Services",
-      value: "12",
+      value: "0",
       icon: Briefcase,
-      change: "8",
+      change: "0",
       changeType: "increase",
       color: "bg-blue-500",
       bgColor: "bg-blue-500",
     },
     {
-      title: "Active Orders",
-      value: "4",
-      icon: Clock,
-      change: "12",
-      changeType: "increase",
-      color: "bg-amber-500",
-      bgColor: "bg-amber-500",
-    },
-    {
-      title: "Monthly Revenue",
-      value: "$1,240",
+      title: "Total Revenue",
+      value: "Rs. 0",
       icon: DollarSign,
-      change: "5",
+      change: "0",
       changeType: "increase",
       color: "bg-green-500",
       bgColor: "bg-green-500",
     },
     {
       title: "Average Rating",
-      value: "4.8",
+      value: "0.0",
       icon: Star,
-      change: "2",
+      change: "0",
       changeType: "increase",
       color: "bg-purple-500",
       bgColor: "bg-purple-500",
     },
   ])
 
-  const [recentActivities, setRecentActivities] = useState([
-    {
-      type: "service",
-      message: "New booking request from John Smith for Plumbing Service",
-      time: "10 minutes ago",
-      status: "pending",
-    },
-    {
-      type: "approval",
-      message: "Your Electrical Service has been approved",
-      time: "2 hours ago",
-      status: "completed",
-    },
-    {
-      type: "rejection",
-      message: "Your Landscaping Service has been rejected. Please update and resubmit.",
-      time: "Yesterday",
-      status: "rejected",
-    },
-    {
-      type: "review",
-      message: "You received a 5-star review from Maria Johnson",
-      time: "2 days ago",
-      status: "completed",
-    },
-  ])
+  const [recentActivities, setRecentActivities] = useState([])
 
   const [performanceData, setPerformanceData] = useState({
-    totalClients: "38",
-    completedJobs: "26",
-    totalEarnings: "$3,840",
-    responseRate: "94%",
+    totalClients: "0",
+    completedJobs: "0",
+    totalEarnings: "Rs. 0",
+    responseRate: "0%",
   })
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!user || !user.id) return;
+      
+      setLoading(true);
       try {
-        // In a real application, these would be API calls
-        // const statsResponse = await api.get("/provider/stats")
-        // setStats(statsResponse.data)
-        // const activitiesResponse = await api.get("/provider/recent-activities")
-        // setRecentActivities(activitiesResponse.data)
-        // const performanceResponse = await api.get("/provider/performance")
-        // setPerformanceData(performanceResponse.data)
+        // Fetch dashboard metrics
+        const dashboardMetrics = await getDashboardMetrics(user.id);
+        
+        // Update stats array with real data
+        if (dashboardMetrics) {
+          setStats([
+            {
+              title: "Total Services",
+              value: dashboardMetrics.totalServices.toString(),
+              icon: Briefcase,
+              change: dashboardMetrics.percentChangeServices.toString(),
+              changeType: dashboardMetrics.percentChangeServices >= 0 ? "increase" : "decrease",
+              color: "bg-blue-500",
+              bgColor: "bg-blue-500",
+            },
+            {
+              title: "Total Revenue",
+              value: `Rs. ${dashboardMetrics.totalRevenue.toFixed(2)}`,
+              icon: DollarSign,
+              change: dashboardMetrics.percentChangeRevenue.toString(),
+              changeType: dashboardMetrics.percentChangeRevenue >= 0 ? "increase" : "decrease",
+              color: "bg-green-500",
+              bgColor: "bg-green-500",
+            },
+            {
+              title: "Average Rating",
+              value: dashboardMetrics.averageRating.toFixed(1),
+              icon: Star,
+              change: dashboardMetrics.percentChangeRating.toString(),
+              changeType: dashboardMetrics.percentChangeRating >= 0 ? "increase" : "decrease",
+              color: "bg-purple-500",
+              bgColor: "bg-purple-500",
+            },
+          ]);
+        }
+        
+        // Fetch performance metrics
+        const performanceMetrics = await getPerformanceMetrics(user.id);
+        if (performanceMetrics) {
+          setPerformanceData({
+            totalClients: performanceMetrics.totalClients.toString(),
+            completedJobs: performanceMetrics.completedJobs.toString(),
+            totalEarnings: `Rs. ${performanceMetrics.totalEarnings.toFixed(2)}`,
+            responseRate: `${performanceMetrics.responseRate}%`,
+          });
+        }
+        
       } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-        toast.error("Failed to load dashboard data")
+        console.error("Error fetching dashboard data:", error);
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, [user])
 
   return (
     <ServiceProviderLayout>
@@ -188,8 +208,11 @@ export function ServiceProviderDashboard() {
             <div>
               <h1 className="text-2xl font-bold">Welcome back, {user?.username || "Provider"}!</h1>
               <p className="mt-2 text-green-50">
-                You have <span className="font-semibold">4 active</span> service requests and{" "}
-                <span className="font-semibold">2 pending</span> approvals
+                {loading ? (
+                  <span className="opacity-75">Loading your dashboard...</span>
+                ) : (
+                  <>You have <span className="font-semibold">{stats[0]?.value || 0}</span> services listed</>
+                )}
               </p>
             </div>
             <Link
@@ -204,54 +227,22 @@ export function ServiceProviderDashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
-          ))}
+          {loading ? (
+            <div className="col-span-4 flex justify-center items-center py-12">
+              <Loader className="w-8 h-8 text-blue-500 animate-spin" />
+              <span className="ml-3 text-gray-600">Loading dashboard data...</span>
+            </div>
+          ) : (
+            stats.map((stat, index) => (
+              <StatCard key={index} {...stat} />
+            ))
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Real-time Notifications */}
-          <div className="lg:col-span-2">
+          <div>
             <NotificationsWidget />
-          </div>
-
-          {/* Performance Metrics */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all">
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-xl font-semibold text-gray-800">Performance Metrics</h2>
-              </div>
-              <div className="p-6 space-y-6">
-                <PerformanceMetric
-                  icon={<Users className="w-5 h-5 text-blue-500" />}
-                  label="Total Clients"
-                  value={performanceData.totalClients}
-                />
-                <PerformanceMetric
-                  icon={<CheckCircle className="w-5 h-5 text-green-500" />}
-                  label="Completed Jobs"
-                  value={performanceData.completedJobs}
-                />
-                <PerformanceMetric
-                  icon={<DollarSign className="w-5 h-5 text-amber-500" />}
-                  label="Total Earnings"
-                  value={performanceData.totalEarnings}
-                />
-                <PerformanceMetric
-                  icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
-                  label="Response Rate"
-                  value={performanceData.responseRate}
-                />
-
-                <Link
-                  to="/provider/analytics"
-                  className="mt-4 flex justify-center items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  <BarChart2 size={16} className="mr-2" />
-                  View detailed analytics
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
 

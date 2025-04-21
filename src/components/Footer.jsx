@@ -9,7 +9,7 @@ import {
   FaMapMarkerAlt,
   FaHeart,
 } from "react-icons/fa"
-// import logo from "../assets/images/logo.png"
+import logo from "../assets/images/logo.jpeg"
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
@@ -22,10 +22,9 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <img
-                src={"/placeholder.svg?height=40&width=40"}
-                // src={logo || "/placeholder.svg?height=40&width=40"}
+                src={logo}
                 alt="HamroSewa Logo"
-                className="h-10 bg-white rounded-full p-1"
+                className="h-12 w-auto bg-white rounded-md p-1"
               />
               <span className="text-xl font-bold text-white">HamroSewa</span>
             </div>

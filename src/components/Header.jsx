@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
 import { FaUser, FaSignOutAlt, FaHistory, FaCalendarCheck, FaBars, FaTimes } from "react-icons/fa"
 import { useAuth } from "../auth/AuthContext"
@@ -8,7 +8,7 @@ import { useNotifications } from "../context/NotificationContext"
 import NotificationIcon from "./notification/NotificationIcon"
 import NotificationPanel from "./notification/NotificationPanel"
 import { ROLES } from "../constants/roles"
-// import logo from "../assets/images/logo.png"
+import logo from "../assets/images/logo.jpeg"
 
 const Header = () => {
   const { user, logout } = useAuth()
@@ -16,6 +16,8 @@ const Header = () => {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const profileRef = useRef(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +31,18 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+  
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileMenuOpen(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [profileRef])
 
   const handleLogout = async () => {
     try {
@@ -58,7 +72,7 @@ const Header = () => {
       <div className="container mx-auto px-4 flex justify-between items-center">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2" onClick={closeMenu}>
-          <img src={"/placeholder.svg?height=40&width=40"} alt="HamroSewa Logo" className="h-10" />
+          <img src={logo} alt="HamroSewa Logo" className="h-10 w-auto rounded-md" />
           <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
             HamroSewa
           </span>
@@ -102,66 +116,73 @@ const Header = () => {
         {/* Auth Buttons - Desktop */}
         <div className="hidden md:flex items-center space-x-4">
           {user ? (
-            <div className="relative group">
-              <div className="flex items-center space-x-3">
-                {/* Notification Icon */}
+            <div className="flex items-center space-x-3">
+              {/* Notification Component - Completely Separate */}
+              <div className="relative z-50">
                 <NotificationIcon />
-                
-                <button className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all duration-300">
+                <NotificationPanel />
+              </div>
+              
+              {/* User Profile - Completely Separate with click behavior instead of hover */}
+              <div className="relative" ref={profileRef}>
+                <button 
+                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all duration-300"
+                >
                   <FaUser />
                   <span>{user.name || "User"}</span>
                 </button>
-              </div>
-              {/* Notification Panel */}
-              <NotificationPanel />
-              
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
-                {user.role === ROLES.ADMIN && (
-                  <Link
-                    to="/admin/dashboard"
-                    className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
-                  >
-                    <FaUser className="text-purple-600" />
-                    <span>Admin Dashboard</span>
-                  </Link>
-                )}
+                
+                {profileMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl transition-all duration-200 transform origin-top-right z-40">
+                    {user.role === ROLES.ADMIN && (
+                      <Link
+                        to="/admin/dashboard"
+                        className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                      >
+                        <FaUser className="text-purple-600" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+                    )}
 
-                {user.role === ROLES.SERVICE_PROVIDER && (
-                  <Link
-                    to="/service-provider/dashboard"
-                    className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
-                  >
-                    <FaUser className="text-purple-600" />
-                    <span>Provider Dashboard</span>
-                  </Link>
-                )}
+                    {user.role === ROLES.SERVICE_PROVIDER && (
+                      <Link
+                        to="/service-provider/dashboard"
+                        className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                      >
+                        <FaUser className="text-purple-600" />
+                        <span>Provider Dashboard</span>
+                      </Link>
+                    )}
 
-                {user.role === ROLES.CUSTOMER && (
-                  <>
-                    <Link
-                      to="/customer/profile"
-                      className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                    {user.role === ROLES.CUSTOMER && (
+                      <>
+                        <Link
+                          to="/customer/profile"
+                          className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                        >
+                          <FaUser className="text-purple-600" />
+                          <span>My Profile</span>
+                        </Link>
+                        <Link
+                          to="/customer/bookings"
+                          className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <FaCalendarCheck className="text-purple-600" />
+                          <span>My Bookings</span>
+                        </Link>
+                      </>
+                    )}
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center space-x-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
                     >
-                      <FaUser className="text-purple-600" />
-                      <span>My Profile</span>
-                    </Link>
-                    <Link
-                      to="/customer/bookings"
-                      className="flex items-center space-x-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <FaCalendarCheck className="text-purple-600" />
-                      <span>My Bookings</span>
-                    </Link>
-                  </>
+                      <FaSignOutAlt />
+                      <span>Logout</span>
+                    </button>
+                  </div>
                 )}
-
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center space-x-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
-                >
-                  <FaSignOutAlt />
-                  <span>Logout</span>
-                </button>
               </div>
             </div>
           ) : (
@@ -189,7 +210,7 @@ const Header = () => {
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center p-4 border-b">
               <Link to="/" className="flex items-center space-x-2" onClick={closeMenu}>
-                <img src={"/placeholder.svg?height=40&width=40"} alt="HamroSewa Logo" className="h-10" />
+                <img src={logo} alt="HamroSewa Logo" className="h-10 w-auto rounded-md" />
                 <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                   HamroSewa
                 </span>
@@ -227,65 +248,74 @@ const Header = () => {
 
             <div className="p-4 border-t">
               {user ? (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
-                    <FaUser className="text-purple-600" />
+                <div className="space-y-4">
+                  {/* User info and notification in mobile view */}
+                  <div className="flex items-center justify-between">
                     <span className="font-medium">{user.name || "User"}</span>
+                    
+                    {/* Mobile Notification Icon - Positioned separately with higher z-index */}
+                    <div className="relative z-50">
+                      <NotificationIcon />
+                      <NotificationPanel />
+                    </div>
                   </div>
-
-                  {user.role === ROLES.ADMIN && (
-                    <Link
-                      to="/admin/dashboard"
-                      className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
-                      onClick={closeMenu}
-                    >
-                      <FaUser className="text-purple-600" />
-                      <span>Admin Dashboard</span>
-                    </Link>
-                  )}
-
-                  {user.role === ROLES.SERVICE_PROVIDER && (
-                    <Link
-                      to="/service-provider/dashboard"
-                      className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
-                      onClick={closeMenu}
-                    >
-                      <FaUser className="text-purple-600" />
-                      <span>Provider Dashboard</span>
-                    </Link>
-                  )}
-
-                  {user.role === ROLES.CUSTOMER && (
-                    <>
+                  
+                  {/* Mobile Navigation Links */}
+                  <div className="flex flex-col space-y-2 mt-4">
+                    {user.role === ROLES.ADMIN && (
                       <Link
-                        to="/customer/profile"
+                        to="/admin/dashboard"
                         className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
                         onClick={closeMenu}
                       >
                         <FaUser className="text-purple-600" />
-                        <span>My Profile</span>
+                        <span>Admin Dashboard</span>
                       </Link>
+                    )}
+                    
+                    {user.role === ROLES.SERVICE_PROVIDER && (
                       <Link
-                        to="/customer/bookings"
+                        to="/service-provider/dashboard"
                         className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
                         onClick={closeMenu}
                       >
-                        <FaCalendarCheck className="text-purple-600" />
-                        <span>My Bookings</span>
+                        <FaUser className="text-purple-600" />
+                        <span>Provider Dashboard</span>
                       </Link>
-                    </>
-                  )}
+                    )}
+                    
+                    {user.role === ROLES.CUSTOMER && (
+                      <>
+                        <Link
+                          to="/customer/profile"
+                          className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
+                          onClick={closeMenu}
+                        >
+                          <FaUser className="text-purple-600" />
+                          <span>My Profile</span>
+                        </Link>
+                        <Link
+                          to="/customer/bookings"
+                          className="flex items-center space-x-2 p-2 w-full text-gray-700 hover:bg-gray-100 rounded-lg"
+                          onClick={closeMenu}
+                        >
+                          <FaCalendarCheck className="text-purple-600" />
+                          <span>My Bookings</span>
+                        </Link>
+                      </>
+                    )}
 
                   <button
                     onClick={() => {
                       handleLogout()
                       closeMenu()
                     }}
-                    className="flex items-center space-x-2 p-2 w-full text-red-600 hover:bg-red-50 rounded-lg"
+                    className="flex items-center space-x-2 p-2 w-full text-red-600 hover:bg-red-50 rounded-lg mt-2"
                   >
                     <FaSignOutAlt />
                     <span>Logout</span>
                   </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">

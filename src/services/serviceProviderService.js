@@ -100,3 +100,105 @@ export const updateServiceProviderProfile = async (serviceProviderId, providerDa
     throw error;
   }
 };
+
+// Dashboard metrics API methods
+export const getDashboardMetrics = async (providerId, startDate, endDate) => {
+  try {
+    let url = `${API_BASE_URL}/service-providers/dashboard-metrics/${providerId}`;
+    
+    // Add date parameters if provided
+    if (startDate || endDate) {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      url += `?${params.toString()}`;
+    }
+    
+    const response = await axios.get(url, {
+      headers: getAuthHeaders()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching dashboard metrics:", error.response?.data || error);
+    throw error;
+  }
+};
+
+export const getPerformanceMetrics = async (providerId, startDate, endDate) => {
+  try {
+    let url = `${API_BASE_URL}/service-providers/performance-metrics/${providerId}`;
+    
+    // Add date parameters if provided
+    if (startDate || endDate) {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      url += `?${params.toString()}`;
+    }
+    
+    const response = await axios.get(url, {
+      headers: getAuthHeaders()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching performance metrics:", error.response?.data || error);
+    throw error;
+  }
+};
+
+export const getMonthlyEarnings = async (providerId, year) => {
+  try {
+    let url = `${API_BASE_URL}/service-providers/monthly-earnings/${providerId}`;
+    
+    // Add year parameter if provided
+    if (year) {
+      url += `?year=${year}`;
+    }
+    
+    const response = await axios.get(url, {
+      headers: getAuthHeaders()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching monthly earnings:", error.response?.data || error);
+    throw error;
+  }
+};
+
+export const getClientGrowth = async (providerId, year) => {
+  try {
+    let url = `${API_BASE_URL}/service-providers/client-growth/${providerId}`;
+    
+    // Add year parameter if provided
+    if (year) {
+      url += `?year=${year}`;
+    }
+    
+    const response = await axios.get(url, {
+      headers: getAuthHeaders()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching client growth:", error.response?.data || error);
+    throw error;
+  }
+};
+
+export const getServicePopularity = async (providerId) => {
+  try {
+    const url = `${API_BASE_URL}/service-providers/service-popularity/${providerId}`;
+    
+    const response = await axios.get(url, {
+      headers: getAuthHeaders()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching service popularity:", error.response?.data || error);
+    throw error;
+  }
+};

@@ -48,3 +48,22 @@ export const updateAdminProfile = async (adminId, adminData) => {
     throw new Error(error.response?.data?.message || 'Failed to update profile');
   }
 };
+
+/**
+ * Fetch admin dashboard metrics from the backend API
+ * @returns {Promise<Object>} Dashboard metrics including totalUsers, totalServiceProviders, totalRevenue, and averageRating
+ */
+export const getAdminDashboardMetrics = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/admin/dashboard-metrics`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching admin dashboard metrics:", error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch dashboard metrics');
+  }
+};
