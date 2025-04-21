@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { parseDate, formatDate as formatDateUtil } from '../../utils/dateUtils'
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Calendar,
   Clock,
@@ -16,12 +16,11 @@ import {
   Filter,
   Trash2,
   Star,
-  X,
   Edit2,
 } from "lucide-react"
 import { useAuth } from "../../auth/AuthContext"
 import { getCustomerBookings, cancelBooking, checkBookingReviewStatus } from "../../services/bookingService"
-import { createReview, updateReview, deleteReview, getCustomerReviews, getReviewByBookingId } from "../../services/reviewService"
+import { deleteReview, getCustomerReviews, getReviewByBookingId } from "../../services/reviewService"
 import toast from "react-hot-toast"
 
 export default function CustomerBookings() {
@@ -36,13 +35,7 @@ export default function CustomerBookings() {
   const [cancellingId, setCancellingId] = useState(null)
   
   // Review state
-  const [showReviewModal, setShowReviewModal] = useState(false)
-  const [selectedBookingForReview, setSelectedBookingForReview] = useState(null)
-  const [reviewText, setReviewText] = useState("")
-  const [reviewRating, setReviewRating] = useState(5)
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
-  const [isEditingReview, setIsEditingReview] = useState(false)
-  const [existingReviewId, setExistingReviewId] = useState(null)
+  const navigate = useNavigate()
   const [userReviews, setUserReviews] = useState([])
   const [isDeletingReview, setIsDeletingReview] = useState(false)
 
@@ -138,8 +131,8 @@ export default function CustomerBookings() {
     }
   }
 
-  const handleOpenReviewModal = (booking, isEditing = false) => {
-    console.log('Opening review modal with booking:', booking)
+  const handleNavigateToReview = (booking, isEditing = false) => {
+    console.log('Navigating to review page with booking:', booking)
     // Enhance the booking object with the provider service ID if it's missing
     let enhancedBooking = { ...booking }
     
@@ -162,153 +155,13 @@ export default function CustomerBookings() {
       }
     }
     
-    setSelectedBookingForReview(enhancedBooking)
-    setShowReviewModal(true)
-    
-    if (isEditing) {
-      // When editing, immediately use the new API to fetch the review directly by booking ID
-      // This is the most reliable method and bypasses any serialization issues
-      console.log('Edit mode - fetching review directly by booking ID:', booking.id)
-      setIsEditingReview(true) // Set this early so the modal shows "Edit Your Review" title
-      fetchReviewForBooking(booking.id)
-    } else {
-      // For new reviews, just reset the form
-      setReviewText("")
-      setReviewRating(5)
-      setExistingReviewId(null)
-      setIsEditingReview(false)
-    }
-  }
-
-    // Function to fetch a review for a specific booking ID using the new API endpoint
-  const fetchReviewForBooking = async (bookingId) => {
-    try {
-      console.log('Attempting to fetch review directly for booking ID:', bookingId)
-      // Use our new direct API endpoint to get the review by booking ID
-      const review = await getReviewByBookingId(bookingId)
-      
-      if (review) {
-        console.log('Successfully found review using booking ID API:', review)
-        setReviewText(review.comment || "")
-        setReviewRating(review.rating || 5)
-        setExistingReviewId(review.id)
-        setIsEditingReview(true)
-      } else {
-        console.error('Review data was empty for booking ID:', bookingId)
-        toast.error('Could not find your review. Please try refreshing the page.')
-      }
-    } catch (error) {
-      console.error('Error fetching review for booking:', error)
-      toast.error('Could not retrieve your review: ' + (error.response?.data || error.message))
-    }
-  }
-
-  const handleCloseReviewModal = () => {
-    setShowReviewModal(false)
-    setSelectedBookingForReview(null)
-    setReviewText("")
-    setReviewRating(5)
-    setIsEditingReview(false)
-    setExistingReviewId(null)
-  }
-
-  const handleSubmitReview = async () => {
-    // Add more detailed validation and logging
-    if (!selectedBookingForReview) {
-      console.error('No booking selected for review')
-      toast.error("An error occurred. No booking selected.")
-      return
-    }
-    
-    if (!user?.id) {
-      console.error('User ID not available')
-      toast.error("Please log in to submit a review")
-      return
-    }
-    
-    // Log the booking object to help with debugging
-    console.log('Selected booking for review:', selectedBookingForReview)
-    
-    if (reviewRating < 1 || reviewRating > 5) {
-      toast.error("Please select a rating between 1 and 5 stars")
-      return
-    }
-    
-    if (!reviewText.trim()) {
-      toast.error("Please provide some feedback in your review")
-      return
-    }
-    
-    setIsSubmittingReview(true)
-    
-    try {
-      // Now that we've fixed the backend models by removing @JsonIgnore,
-      // we should receive the providerService object with id directly
-      let serviceId = null;
-      
-      // Check for the service ID in the expected location
-      if (selectedBookingForReview.providerService?.id) {
-        serviceId = selectedBookingForReview.providerService.id;
-        console.log('Using providerService.id:', serviceId);
-      } else if (selectedBookingForReview.provider_service_id) {
-        serviceId = selectedBookingForReview.provider_service_id;
-        console.log('Using provider_service_id:', serviceId);
-      } else {
-        console.error('Service ID not found in booking:', selectedBookingForReview);
-        toast.error('Could not determine service ID. Please try again.');
-        setIsSubmittingReview(false);
-        return;
-      }
-      
-      if (!serviceId) {
-        console.error('Service ID not found in booking:', selectedBookingForReview);
-        toast.error('Could not determine service ID. Please try again.');
-        setIsSubmittingReview(false);
-        return;
-      }
-      
-      const reviewData = {
-        bookingId: selectedBookingForReview.id,
-        rating: reviewRating,
-        comment: reviewText,
-        customerId: user.id,
-        providerServiceId: serviceId
-      }
-      
-      if (isEditingReview && existingReviewId) {
-        await updateReview(existingReviewId, reviewData)
-        const updatedReviews = userReviews.map(review => 
-          review.id === existingReviewId 
-            ? { ...review, rating: reviewRating, comment: reviewText } 
-            : review
-        )
-        setUserReviews(updatedReviews)
-        toast.success("Review updated successfully")
-      } else {
-        const newReview = await createReview(reviewData)
-        setUserReviews([...userReviews, newReview])
-        const updatedBookings = bookings.map(booking => 
-          booking.id === selectedBookingForReview.id 
-            ? { ...booking, isReviewed: true } 
-            : booking
-        )
-        setBookings(updatedBookings)
-        toast.success("Review submitted successfully")
-      }
-      
-      handleCloseReviewModal()
-    } catch (error) {
-      console.error("Error submitting review:", error)
-      if (error.response?.data?.includes("already exists for this booking")) {
-        toast.error("You have already reviewed this booking")
-      } else if (error.response?.data?.includes("hasn't been completed")) {
-        toast.error("You can only review completed services")
-      } else {
-        toast.error("Failed to submit review. Please try again.")
-      }
-    } finally {
-      setIsSubmittingReview(false)
-    }
+    // Navigate to the review page with the booking data and edit mode flag
+    navigate('/customer/review', { 
+      state: { 
+        booking: enhancedBooking, 
+        isEditing: isEditing 
+      } 
+    })
   }
 
   const handleDeleteReview = async (booking) => {
@@ -623,7 +476,7 @@ export default function CustomerBookings() {
                   <div>
                     {!booking.isReviewed && !getBookingReviewStatus(booking) ? (
                       <button
-                        onClick={() => handleOpenReviewModal(booking, false)}
+                        onClick={() => handleNavigateToReview(booking, false)}
                         className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
                       >
                         <Star size={14} className="mr-1.5" />
@@ -637,7 +490,7 @@ export default function CustomerBookings() {
                         </div>
                         <div className="flex space-x-1">
                           <button
-                            onClick={() => handleOpenReviewModal(booking, true)}
+                            onClick={() => handleNavigateToReview(booking, true)}
                             className="inline-flex items-center p-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             title="Edit review"
                           >
@@ -746,134 +599,7 @@ export default function CustomerBookings() {
         </div>
       </div>
       
-      {/* Review Modal */}
-      {showReviewModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="review-modal" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleCloseReviewModal}></div>
-
-            {/* Modal panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        {isEditingReview ? "Edit Your Review" : "Write a Review"}
-                      </h3>
-                      <button
-                        type="button"
-                        className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
-                        onClick={handleCloseReviewModal}
-                      >
-                        <span className="sr-only">Close</span>
-                        <X className="h-6 w-6" aria-hidden="true" />
-                      </button>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <p className="text-sm text-gray-500 mb-2">
-                        Service: {
-                          selectedBookingForReview?.providerService?.serviceName || 
-                          selectedBookingForReview?.service?.serviceName || 
-                          selectedBookingForReview?.bookingDetails?.[0]?.serviceName || 
-                          'Unnamed Service'
-                        }
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Booking ID: #{selectedBookingForReview?.id}
-                      </p>
-                      
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Your Rating
-                        </label>
-                        <div className="flex items-center">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              className={`${
-                                reviewRating >= star
-                                  ? "text-yellow-400 hover:text-yellow-500"
-                                  : "text-gray-300 hover:text-yellow-400"
-                              } p-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500`}
-                              onClick={() => setReviewRating(star)}
-                            >
-                              <Star
-                                className="h-6 w-6"
-                                fill={reviewRating >= star ? "currentColor" : "none"}
-                                aria-hidden="true"
-                              />
-                              <span className="sr-only">{star} stars</span>
-                            </button>
-                          ))}
-                          <span className="ml-2 text-gray-600">{reviewRating}/5</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <label htmlFor="review-text" className="block text-sm font-medium text-gray-700 mb-2">
-                          Your Review
-                        </label>
-                        <textarea
-                          id="review-text"
-                          className="shadow-sm focus:ring-purple-500 focus:border-purple-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
-                          placeholder="Share your experience with this service..."
-                          rows={4}
-                          value={reviewText}
-                          onChange={(e) => setReviewText(e.target.value)}
-                        ></textarea>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                {/* With the backend models fixed, we now show appropriate status information */}
-                {selectedBookingForReview && (
-                  <div className="mb-3 text-sm w-full">
-                    {selectedBookingForReview.providerService?.id ? (
-                      <p className="text-green-600">Ready to submit review for {selectedBookingForReview.providerService.serviceName}</p>
-                    ) : (
-                      <p className="text-red-500">
-                        Warning: Service information may be incomplete. Please refresh the page.
-                      </p>
-                    )}
-                  </div>
-                )}
-                
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={handleSubmitReview}
-                  disabled={isSubmittingReview}
-                  data-testid="submit-review-button"
-                >
-                  {isSubmittingReview ? (
-                    <>
-                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      {isEditingReview ? "Updating..." : "Submitting..."}
-                    </>
-                  ) : (
-                    isEditingReview ? "Update Review" : "Submit Review"
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={handleCloseReviewModal}
-                  disabled={isSubmittingReview}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* No review modal needed anymore - using separate page */}
     </div>
   )
 }

@@ -4,16 +4,6 @@ import { Card, Typography, Progress, Tag, Divider, Alert, Button, Tooltip, notif
 import { SyncOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
-
-/**
- * Component to display a customer's loyalty status with a service provider
- * 
- * @param {Object} props - Component props
- * @param {number} props.customerId - The customer ID
- * @param {number} props.serviceProviderId - The service provider ID
- * @param {string} props.providerName - The service provider name
- * @returns {JSX.Element} - Rendered component
- */
 const LoyaltyStatusCard = ({ customerId, serviceProviderId, providerName }) => {
   const [loyaltyData, setLoyaltyData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +83,7 @@ const LoyaltyStatusCard = ({ customerId, serviceProviderId, providerName }) => {
     discountPercentage 
   } = loyaltyData;
 
-  // Calculate progress percentage (0 to 100%)
+
   const progressPercentage = Math.min(completedBookings * 25, 100); // 4 bookings = 100%
 
   return (
@@ -111,7 +101,11 @@ const LoyaltyStatusCard = ({ customerId, serviceProviderId, providerName }) => {
           </Tooltip>
         </div>
       }
-      bordered={true}
+      extra={
+        <Tag color={eligibleForDiscount ? 'green' : 'blue'}>
+          {eligibleForDiscount ? 'Eligible for Discount' : 'Not Eligible'}
+        </Tag>
+      } 
       style={{ marginBottom: 20 }}
     >
       <div style={{ marginBottom: 16 }}>

@@ -87,6 +87,22 @@ export const deleteReview = async (reviewId, customerId) => {
   }
 };
 
+// Get a single review by ID
+export const getReviewById = async (reviewId) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/reviews/${reviewId}`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching review:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
 // Get reviews by customer ID
 export const getCustomerReviews = async (customerId) => {
   try {

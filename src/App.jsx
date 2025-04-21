@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Route, Routes, useLocation } from "react-router-dom"
-import { useAuth } from "./auth/AuthContext"
 import { NotificationProvider } from "./context/NotificationContext"
 import { Toaster } from "react-hot-toast"
 import { ArrowUp } from "lucide-react"
@@ -35,7 +34,8 @@ import { AccessDenied } from "./pages/AccessDenied"
 import { EditProfilePage } from "./pages/customer/EditProfilePage"
 import { CustomerProfile } from "./pages/customer/CustomerProfile"
 import { AddEditService } from "./pages/serviceProvider/AddEditService"
-import  CustomerBookings  from "./pages/customer/CustomerBookings"
+import CustomerBookings from "./pages/customer/CustomerBookings"
+import ReviewPage from "./pages/customer/ReviewPage"
 
 function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false)
@@ -272,6 +272,14 @@ function AppContent() {
             element={
               <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
                 <CustomerBookings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/review"
+            element={
+              <PrivateRoute requiredRoles={[ROLES.CUSTOMER]}>
+                <ReviewPage />
               </PrivateRoute>
             }
           />

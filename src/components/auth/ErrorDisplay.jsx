@@ -1,8 +1,6 @@
 import { motion } from "framer-motion"
 
 export function ErrorDisplay({ message }) {
-  // If the error message contains the specific text from the undefined property error,
-  // replace it with a more user-friendly message
   const displayMessage = message && message.includes("Cannot read properties of undefined")
     ? "Server is currently unavailable. Please try again later."
     : message
